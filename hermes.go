@@ -47,17 +47,17 @@ func (s *Service) Call(name string, in, out interface{}) (int, error) {
 
 	inData, err := json.Marshal(in)
 	if err != nil {
-		return 401, err
+		return 400, err
 	}
 
 	req, err := http.NewRequest(ep.Method, url, bytes.NewBuffer(inData))
 	if err != nil {
-		return 401, err
+		return 400, err
 	}
 
 	resp, err := getDefaultClient().Do(req)
 	if err != nil {
-		return 401, err
+		return 400, err
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
@@ -111,7 +111,7 @@ func getGinHandler(svc Serviceable, ep Endpoint, method reflect.Method) func(c *
 		output := ep.NewOutput()
 		err := c.BindJSON(input)
 		if err != nil {
-			c.Status(http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, &gin.H{"error": err.Error()})
 			log.Println(err)
 			return
 		}

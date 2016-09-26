@@ -71,7 +71,7 @@ func TestCallWrongSecret(t *testing.T) {
 	si := InitService(&MyService{})
 	out := &Outbound{true}
 	code, err := si.Call("RpcCall", &Inbound{"wrong secret"}, out)
-	if code != 401 {
+	if code != 400 {
 		t.Fail()
 	}
 	if err != nil {
