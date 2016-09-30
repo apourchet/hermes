@@ -13,8 +13,14 @@ import (
 )
 
 type Serviceable interface {
-	Host() string
-	Endpoints() EndpointMap
+	Hosted
+	Server
+	// Should also implement all endpoints
+}
+
+type Mockable interface {
+	Server
+	// Should also implement all endpoints
 }
 
 type EndpointMap []Endpoint
@@ -27,6 +33,14 @@ type Endpoint struct {
 	NewOutput func() interface{}
 }
 
+type Hosted interface {
+	Host() string
+}
+
+type Server interface {
+	Endpoints() EndpointMap
+}
+
 type ServiceInterface interface {
 	Serve(e *gin.Engine) error
 	Call(name string, in, out interface{}) (int, error)
@@ -34,6 +48,14 @@ type ServiceInterface interface {
 
 type Service struct {
 	serviceable Serviceable
+}
+
+type MockServiceInterface interface {
+	Call(name string, in, out interface{}) (int, error)
+}
+
+type MockService struct {
+	mockable Mockable
 }
 
 func (s *Service) Call(name string, in, out interface{}) (int, error) {
@@ -77,13 +99,36 @@ func getDefaultClient() *http.Client {
 	return &http.Client{}
 }
 
-func findEndpointByHandler(svc Serviceable, name string) (Endpoint, error) {
+func findEndpointByHandler(svc Server, name string) (Endpoint, error) {
 	for _, ep := range svc.Endpoints() {
 		if ep.Handler == name {
 			return ep, nil
 		}
 	}
 	return Endpoint{}, fmt.Errorf("MethodNotFoundError")
+}
+
+func (m *MockService) Call(name string, in, out interface{}) (int, error) {
+	svc := m.mockable
+	_, err := findEndpointByHandler(svc, name)
+	if err != nil {
+		return 404, err
+	}
+
+	serviceType := reflect.TypeOf(svc)
+	method, ok := serviceType.MethodByName(name)
+	if !ok {
+		return 404, fmt.Errorf("MethodNotImplementedError: %s", name)
+	}
+
+	args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(in), reflect.ValueOf(out)}
+	vals := method.Func.Call(args)
+	code := int(vals[0].Int())
+	if !vals[1].IsNil() {
+		errVal := vals[1].Interface().(error)
+		return code, errVal
+	}
+	return code, nil
 }
 
 func (s *Service) Serve(e *gin.Engine) error {
@@ -129,4 +174,8 @@ func getGinHandler(svc Serviceable, ep Endpoint, method reflect.Method) func(c *
 
 func InitService(svc Serviceable) ServiceInterface {
 	return &Service{svc}
+}
+
+func InitMockService(mock Mockable) MockServiceInterface {
+	return &MockService{mock}
 }
