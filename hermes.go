@@ -12,12 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Input types. These interfaces must be satisfied by the user
 type Serviceable interface {
 	Hosted
 	Server
 	// Should also implement all endpoints
 }
 
+// Any Serviceable is Mockable
 type Mockable interface {
 	Server
 	// Should also implement all endpoints
@@ -41,24 +43,28 @@ type Server interface {
 	Endpoints() EndpointMap
 }
 
+// Output types. These interfaces are satisfied by
+// our outputs
 type ServiceInterface interface {
 	Serve(e *gin.Engine) error
+	Callable
+}
+
+type Callable interface {
 	Call(name string, in, out interface{}) (int, error)
 }
 
-type Service struct {
+type service struct {
 	serviceable Serviceable
 }
 
-type MockServiceInterface interface {
-	Call(name string, in, out interface{}) (int, error)
-}
-
-type MockService struct {
+type mockService struct {
 	mockable Mockable
 }
 
-func (s *Service) Call(name string, in, out interface{}) (int, error) {
+// Implementations
+
+func (s *service) Call(name string, in, out interface{}) (int, error) {
 	svc := s.serviceable
 	ep, err := findEndpointByHandler(svc, name)
 	if err != nil {
@@ -108,7 +114,7 @@ func findEndpointByHandler(svc Server, name string) (Endpoint, error) {
 	return Endpoint{}, fmt.Errorf("MethodNotFoundError")
 }
 
-func (m *MockService) Call(name string, in, out interface{}) (int, error) {
+func (m *mockService) Call(name string, in, out interface{}) (int, error) {
 	svc := m.mockable
 	_, err := findEndpointByHandler(svc, name)
 	if err != nil {
@@ -131,7 +137,7 @@ func (m *MockService) Call(name string, in, out interface{}) (int, error) {
 	return code, nil
 }
 
-func (s *Service) Serve(e *gin.Engine) error {
+func (s *service) Serve(e *gin.Engine) error {
 	svc := s.serviceable
 	serviceType := reflect.TypeOf(svc)
 	endpoints := svc.Endpoints()
@@ -173,9 +179,9 @@ func getGinHandler(svc Serviceable, ep Endpoint, method reflect.Method) func(c *
 }
 
 func InitService(svc Serviceable) ServiceInterface {
-	return &Service{svc}
+	return &service{svc}
 }
 
-func InitMockService(mock Mockable) MockServiceInterface {
-	return &MockService{mock}
+func InitMockService(mock Mockable) Callable {
+	return &mockService{mock}
 }
