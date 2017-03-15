@@ -1,11 +1,13 @@
 package hermes
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 // Service definition
@@ -34,93 +36,49 @@ type Outbound struct {
 func NewInbound() interface{}  { return &Inbound{} }
 func NewOutbound() interface{} { return &Outbound{} }
 
-func (s *MyService) RpcCall(c *gin.Context, in *Inbound, out *Outbound) (int, error) {
+func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {
 		out.Ok = true
 		return http.StatusOK, nil
 	}
 	out.Ok = false
-	return http.StatusBadRequest, nil
-}
-
-// Mocked Service
-type MockedService struct{}
-
-func (s *MockedService) Endpoints() EndpointMap {
-	return EndpointMap{
-		Endpoint{"RpcCall", "GET", "/test", NewInbound, NewOutbound},
-		Endpoint{"RpcCall", "POST", "/test", NewInbound, NewOutbound},
-	}
-}
-
-func (s *MockedService) RpcCall(in *Inbound, out *Outbound) (int, error) {
-	if in.Message == "secret" {
-		out.Ok = true
-		return http.StatusOK, nil
-	}
-	out.Ok = false
-	return http.StatusBadRequest, nil
+	return http.StatusBadRequest, fmt.Errorf("Secret was wrong")
 }
 
 // Tests
 func TestMain(m *testing.M) {
-	si := InitService(&MyService{})
 	engine := gin.New()
-	si.Serve(engine)
-	go engine.Run(":9000")
-	time.Sleep(500 * time.Millisecond)
+	DefaultClient = &MockClient{engine}
+	NewService(&MyService{}).Serve(engine)
 	m.Run()
 }
 
 func TestMock(t *testing.T) {
-	si := InitMockService(&MockedService{})
+	si := NewMockService(&MyService{})
 	out := &Outbound{false}
-	code, err := si.Call("RpcCall", &Inbound{"secret"}, out)
-	if code != 200 {
-		t.Fail()
-	}
-	if err != nil {
-		t.Fail()
-	}
-	if !out.Ok {
-		t.Fail()
-	}
+	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
+	assert.Nil(t, err)
+	assert.True(t, out.Ok)
 }
 
 func TestCallSuccess(t *testing.T) {
-	si := InitService(&MyService{})
+	si := NewService(&MyService{})
 	out := &Outbound{false}
-	code, err := si.Call("RpcCall", &Inbound{"secret"}, out)
-	if code != 200 {
-		t.Fail()
-	}
-	if err != nil {
-		t.Fail()
-	}
-	if !out.Ok {
-		t.Fail()
-	}
+	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
+	assert.Nil(t, err)
+	assert.True(t, out.Ok)
 }
 
 func TestCallWrongSecret(t *testing.T) {
-	si := InitService(&MyService{})
+	si := NewService(&MyService{})
 	out := &Outbound{true}
-	code, err := si.Call("RpcCall", &Inbound{"wrong secret"}, out)
-	if code != 400 {
-		t.Fail()
-	}
-	if err != nil {
-		t.Fail()
-	}
-	if out.Ok {
-		t.Fail()
-	}
+	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
+	assert.Nil(t, err)
+	assert.False(t, out.Ok)
 }
 
 func TestCallNotFound(t *testing.T) {
-	si := InitService(&MyService{})
-	code, err := si.Call("NotAnEndpoint", &Inbound{}, &Outbound{})
-	if code != 404 || err == nil {
-		t.Fail()
-	}
+	si := NewService(&MyService{})
+	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
+	assert.NotNil(t, err)
 }
