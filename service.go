@@ -11,11 +11,13 @@ import (
 )
 
 type Service struct {
+	Client IClient
+
 	serviceable Serviceable
 }
 
 func NewService(svc Serviceable) *Service {
-	return &Service{svc}
+	return &Service{DefaultClient, svc}
 }
 
 func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
@@ -24,7 +26,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	if err != nil {
 		return err
 	}
-	url := fmt.Sprintf("http://%s%s", svc.Host(), ep.Path)
+	url := fmt.Sprintf("%s%s", svc.Host(), ep.Path)
 
 	inData, err := json.Marshal(in)
 	if err != nil {

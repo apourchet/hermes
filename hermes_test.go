@@ -48,7 +48,7 @@ func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int,
 // Tests
 func TestMain(m *testing.M) {
 	engine := gin.New()
-	DefaultClient = &MockClient{engine}
+	DefaultClient = &MockClient{"http", engine}
 	NewService(&MyService{}).Serve(engine)
 	m.Run()
 }

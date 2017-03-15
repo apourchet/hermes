@@ -16,18 +16,32 @@ import (
 )
 
 type IClient interface {
+	GetScheme() string
+	SetScheme(string) string
 	Do(ctx context.Context, url, method string, in io.Reader, out interface{}) error
 }
 
 var _ IClient = &Client{}
 var _ IClient = &MockClient{}
 
-var DefaultClient IClient = &Client{}
+var DefaultClient IClient = &Client{"http"}
 
-type Client struct{}
+type Client struct {
+	Scheme string
+}
+
+func (c *Client) GetScheme() string {
+	return c.Scheme
+}
+
+func (c *Client) SetScheme(scheme string) string {
+	old := c.Scheme
+	c.Scheme = scheme
+	return old
+}
 
 func (c *Client) Do(ctx context.Context, url, method string, in io.Reader, out interface{}) error {
-	req, err := http.NewRequest(method, url, in)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s://%s", c.Scheme, url), in)
 	if err != nil {
 		return err
 	}
@@ -61,11 +75,23 @@ func (c *Client) Do(ctx context.Context, url, method string, in io.Reader, out i
 }
 
 type MockClient struct {
+	Scheme string
+
 	*gin.Engine
 }
 
+func (c *MockClient) GetScheme() string {
+	return c.Scheme
+}
+
+func (c *MockClient) SetScheme(scheme string) string {
+	old := c.Scheme
+	c.Scheme = scheme
+	return old
+}
+
 func (c *MockClient) Do(ctx context.Context, url, method string, in io.Reader, out interface{}) error {
-	req, err := http.NewRequest(method, url, in)
+	req, err := http.NewRequest(method, fmt.Sprintf("%s://%s", c.Scheme, url), in)
 	if err != nil {
 		return err
 	}

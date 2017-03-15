@@ -2,7 +2,6 @@ package hermes
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 
@@ -29,8 +28,7 @@ func getGinHandler(svc Serviceable, ep Endpoint, method reflect.Method) func(c *
 		output := ep.NewOutput()
 		err := c.BindJSON(input)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, &gin.H{"error": err.Error()})
-			log.Println(err)
+			c.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
 			return
 		}
 		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(c), reflect.ValueOf(input), reflect.ValueOf(output)}
