@@ -5,21 +5,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Service struct {
-	Client   IClient
-	Resolve  Resolver
-	Bindings BindingFactorySource
+	Client        IClient
+	Resolve       Resolver
+	Bindings      BindingFactorySource
+	QueryTemplate QueryTemplater
 
 	serviceable Serviceable
 }
 
 func NewService(svc Serviceable) *Service {
-	return &Service{DefaultClient, DefaultResolver, DefaultBindingFactorySource, svc}
+	out := &Service{}
+	out.Client = DefaultClient
+	out.Resolve = DefaultResolver
+	out.Bindings = DefaultBindingFactorySource
+	out.QueryTemplate = DefaultQueryTemplate
+
+	out.serviceable = svc
+	return out
 }
 
 func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
@@ -29,17 +38,26 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 		return err
 	}
 
-	url, err := s.Resolve(svc.SNI(), ep.Path)
+	var body io.Reader
+	if in != nil {
+		inData, err := json.Marshal(in)
+		if err != nil {
+			return err
+		}
+		body = bytes.NewBuffer(inData)
+	}
+
+	fullpath, err := s.QueryTemplate(ep.Path, in)
 	if err != nil {
 		return err
 	}
 
-	inData, err := json.Marshal(in)
+	url, err := s.Resolve(svc.SNI(), fullpath)
 	if err != nil {
 		return err
 	}
 
-	return DefaultClient.Do(ctx, url, ep.Method, bytes.NewBuffer(inData), out)
+	return s.Client.Do(ctx, url, ep.Method, body, out)
 }
 
 func (s *Service) Serve(e *gin.Engine) error {
