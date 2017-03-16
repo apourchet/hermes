@@ -4,7 +4,6 @@ package hermes
 type Serviceable interface {
 	Hosted
 	Server
-	// Should also implement all endpoints
 }
 
 type EndpointMap []Endpoint
@@ -18,7 +17,7 @@ type Endpoint struct {
 }
 
 type Hosted interface {
-	Host() string
+	SNI() string
 }
 
 type Server interface {

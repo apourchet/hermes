@@ -4,16 +4,21 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
+func init() {
+	gin.SetMode(gin.ReleaseMode) // suppress logs
+}
+
 // Service definition
 type MyService struct{}
 
-func (s *MyService) Host() string {
+func (s *MyService) SNI() string {
 	return "localhost:9000"
 }
 
@@ -42,15 +47,17 @@ func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int,
 		return http.StatusOK, nil
 	}
 	out.Ok = false
-	return http.StatusBadRequest, fmt.Errorf("Secret was wrong")
+	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
 }
 
 // Tests
+var engine *gin.Engine
+
 func TestMain(m *testing.M) {
-	engine := gin.New()
+	engine = gin.New()
 	DefaultClient = &MockClient{"http", engine}
 	NewService(&MyService{}).Serve(engine)
-	m.Run()
+	os.Exit(m.Run())
 }
 
 func TestMock(t *testing.T) {
@@ -73,8 +80,7 @@ func TestCallWrongSecret(t *testing.T) {
 	si := NewService(&MyService{})
 	out := &Outbound{true}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
-	assert.Nil(t, err)
-	assert.False(t, out.Ok)
+	assert.NotNil(t, err)
 }
 
 func TestCallNotFound(t *testing.T) {
@@ -82,3 +88,13 @@ func TestCallNotFound(t *testing.T) {
 	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
+
+// func TestQueryParamsString(t *testing.T) {
+// 	req, _ := http.NewRequest("GET", "http://localhost:9000/test?message=secret", nil)
+// 	w := httptest.NewRecorder()
+// 	engine.ServeHTTP(w, req)
+// 	resp := w.Result()
+// 	assert.NotNil(t, resp)
+// 	content, _ := ioutil.ReadAll(resp.Body)
+// 	assert.Equal(t, string(content), "hello")
+// }

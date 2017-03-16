@@ -11,13 +11,14 @@ import (
 )
 
 type Service struct {
-	Client IClient
+	Client  IClient
+	Resolve Resolver
 
 	serviceable Serviceable
 }
 
 func NewService(svc Serviceable) *Service {
-	return &Service{DefaultClient, svc}
+	return &Service{DefaultClient, DefaultResolver, svc}
 }
 
 func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
@@ -26,7 +27,11 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	if err != nil {
 		return err
 	}
-	url := fmt.Sprintf("%s%s", svc.Host(), ep.Path)
+
+	url, err := s.Resolve(svc.SNI(), ep.Path)
+	if err != nil {
+		return err
+	}
 
 	inData, err := json.Marshal(in)
 	if err != nil {
