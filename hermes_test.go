@@ -24,8 +24,10 @@ func (s *MyService) SNI() string {
 
 func (s *MyService) Endpoints() EndpointMap {
 	return EndpointMap{
-		Endpoint{"RpcCall", "POST", "/test", NewInbound, NewOutbound},
-		Endpoint{"RpcCall", "GET", "/test", NewInbound, NewOutbound},
+		Endpoint{"RpcCall", "POST", "/rpccall", NewInbound, NewOutbound},
+		Endpoint{"RpcCall", "GET", "/rpccall", NewInbound, NewOutbound},
+		Endpoint{"NoInput", "POST", "/noinput", nil, NewOutbound},
+		Endpoint{"NoOutput", "POST", "/nooutput", NewInbound, nil},
 	}
 }
 
@@ -47,6 +49,18 @@ func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int,
 		return http.StatusOK, nil
 	}
 	out.Ok = false
+	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
+}
+
+func (s *MyService) NoInput(c context.Context, out *Outbound) (int, error) {
+	out.Ok = true
+	return http.StatusOK, nil
+}
+
+func (s *MyService) NoOutput(c context.Context, in *Inbound) (int, error) {
+	if in.Message == "secret" {
+		return http.StatusOK, nil
+	}
 	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
 }
 
@@ -81,11 +95,29 @@ func TestCallWrongSecret(t *testing.T) {
 	out := &Outbound{true}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
+	assert.True(t, out.Ok) // Error in the request, out was not filled in
 }
 
 func TestCallNotFound(t *testing.T) {
 	si := NewService(&MyService{})
 	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
+	assert.NotNil(t, err)
+}
+
+func TestNoInput(t *testing.T) {
+	si := NewService(&MyService{})
+	out := &Outbound{false}
+	err := si.Call(context.Background(), "NoInput", nil, out)
+	assert.Nil(t, err)
+	assert.True(t, out.Ok)
+}
+
+func TestNoOutput(t *testing.T) {
+	si := NewService(&MyService{})
+	err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
+	assert.Nil(t, err)
+
+	err = si.Call(context.Background(), "NoOutput", &Inbound{"wrong secret"}, nil)
 	assert.NotNil(t, err)
 }
 

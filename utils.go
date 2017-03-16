@@ -19,22 +19,41 @@ func findEndpointByHandler(svc Server, name string) (Endpoint, error) {
 
 func getGinHandler(svc Serviceable, binding BindingFactory, ep Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		input := ep.NewInput()
-		output := ep.NewOutput()
-
-		err := binding(ctx).Bind(ctx.Request, input)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
-			return
+		var input interface{}
+		if ep.NewInput != nil {
+			input = ep.NewInput()
 		}
 
-		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(ctx), reflect.ValueOf(input), reflect.ValueOf(output)}
+		var output interface{}
+		if ep.NewOutput != nil {
+			output = ep.NewOutput()
+		}
+
+		// Bind input to context
+		if input != nil {
+			err := binding(ctx).Bind(ctx.Request, input)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
+				return
+			}
+		}
+
+		// Prepare arguments to function
+		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(ctx)}
+		if input != nil {
+			args = append(args, reflect.ValueOf(input))
+		}
+		if output != nil {
+			args = append(args, reflect.ValueOf(output))
+		}
+
+		// Call function
 		vals := method.Func.Call(args)
 		code := int(vals[0].Int())
 		if !vals[1].IsNil() {
 			errVal := vals[1].Interface().(error)
 			ctx.JSON(code, map[string]string{"message": errVal.Error()})
-		} else {
+		} else if output != nil {
 			ctx.JSON(code, output)
 		}
 	}

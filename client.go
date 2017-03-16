@@ -59,8 +59,11 @@ func (c *Client) Do(ctx context.Context, url, method string, in io.Reader, out i
 	}
 
 	if resp.StatusCode/100 == 2 {
-		err = json.Unmarshal(body, out)
-		return err
+		if out != nil {
+			err = json.Unmarshal(body, out)
+			return err
+		}
+		return nil
 	}
 
 	tmp := map[string]string{}
@@ -106,13 +109,15 @@ func (c *MockClient) Do(ctx context.Context, url, method string, in io.Reader, o
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Cound not read body")
 		return err
 	}
 
 	if resp.StatusCode/100 == 2 {
-		err = json.Unmarshal(body, out)
-		return err
+		if out != nil {
+			err = json.Unmarshal(body, out)
+			return err
+		}
+		return nil
 	}
 
 	tmp := map[string]string{}
