@@ -11,14 +11,15 @@ import (
 )
 
 type Service struct {
-	Client  IClient
-	Resolve Resolver
+	Client   IClient
+	Resolve  Resolver
+	Bindings BindingFactorySource
 
 	serviceable Serviceable
 }
 
 func NewService(svc Serviceable) *Service {
-	return &Service{DefaultClient, DefaultResolver, svc}
+	return &Service{DefaultClient, DefaultResolver, DefaultBindingFactorySource, svc}
 }
 
 func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
@@ -50,7 +51,13 @@ func (s *Service) Serve(e *gin.Engine) error {
 		if !ok {
 			return fmt.Errorf("Endpoint '%s' does not match any method of the type %t", ep.Handler, serviceType)
 		}
-		serveEndpoint(e, svc, ep, method)
+		s.serveEndpoint(e, ep, method)
 	}
 	return nil
+}
+
+func (s *Service) serveEndpoint(e *gin.Engine, ep Endpoint, method reflect.Method) {
+	binding := s.Bindings(ep.Path)
+	fn := getGinHandler(s.serviceable, binding, ep, method)
+	e.Handle(ep.Method, ep.Path, fn)
 }

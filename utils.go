@@ -17,28 +17,25 @@ func findEndpointByHandler(svc Server, name string) (Endpoint, error) {
 	return Endpoint{}, fmt.Errorf("MethodNotFoundError")
 }
 
-func serveEndpoint(e *gin.Engine, svc Serviceable, ep Endpoint, method reflect.Method) {
-	fn := getGinHandler(svc, ep, method)
-	e.Handle(ep.Method, ep.Path, fn)
-}
-
-func getGinHandler(svc Serviceable, ep Endpoint, method reflect.Method) func(c *gin.Context) {
-	return func(c *gin.Context) {
+func getGinHandler(svc Serviceable, binding BindingFactory, ep Endpoint, method reflect.Method) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
 		input := ep.NewInput()
 		output := ep.NewOutput()
-		err := c.BindJSON(input)
+
+		err := binding(ctx).Bind(ctx.Request, input)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
+			ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
 			return
 		}
-		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(c), reflect.ValueOf(input), reflect.ValueOf(output)}
+
+		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(ctx), reflect.ValueOf(input), reflect.ValueOf(output)}
 		vals := method.Func.Call(args)
 		code := int(vals[0].Int())
 		if !vals[1].IsNil() {
 			errVal := vals[1].Interface().(error)
-			c.JSON(code, map[string]string{"message": errVal.Error()})
+			ctx.JSON(code, map[string]string{"message": errVal.Error()})
 		} else {
-			c.JSON(code, output)
+			ctx.JSON(code, output)
 		}
 	}
 }

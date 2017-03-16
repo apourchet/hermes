@@ -24,8 +24,8 @@ func (s *MyService) SNI() string {
 
 func (s *MyService) Endpoints() EndpointMap {
 	return EndpointMap{
-		Endpoint{"RpcCall", "GET", "/test", NewInbound, NewOutbound},
 		Endpoint{"RpcCall", "POST", "/test", NewInbound, NewOutbound},
+		Endpoint{"RpcCall", "GET", "/test", NewInbound, NewOutbound},
 	}
 }
 
