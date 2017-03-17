@@ -57,7 +57,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 		return err
 	}
 
-	return s.Client.Do(ctx, url, ep.Method, body, out)
+	return s.Client.Exec(ctx, url, ep.Method, body, out)
 }
 
 func (s *Service) Serve(e *gin.Engine) error {
