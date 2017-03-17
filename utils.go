@@ -5,19 +5,20 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/apourchet/hermes/binding"
 	"github.com/gin-gonic/gin"
 )
 
-func findEndpointByHandler(svc Server, name string) (Endpoint, error) {
+func findEndpointByHandler(svc Server, name string) (*Endpoint, error) {
 	for _, ep := range svc.Endpoints() {
 		if ep.Handler == name {
 			return ep, nil
 		}
 	}
-	return Endpoint{}, fmt.Errorf("MethodNotFoundError")
+	return nil, fmt.Errorf("MethodNotFoundError")
 }
 
-func getGinHandler(svc Serviceable, binding BindingFactory, ep Endpoint, method reflect.Method) gin.HandlerFunc {
+func getGinHandler(svc Serviceable, binders binding.BindingFactory, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input interface{}
 		if ep.NewInput != nil {
@@ -31,7 +32,7 @@ func getGinHandler(svc Serviceable, binding BindingFactory, ep Endpoint, method 
 
 		// Bind input to context
 		if input != nil {
-			err := binding(ctx).Bind(ctx.Request, input)
+			err := binders(ctx).Bind(ctx.Request, input)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
 				return

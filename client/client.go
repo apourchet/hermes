@@ -1,4 +1,4 @@
-package hermes
+package client
 
 import (
 	"context"

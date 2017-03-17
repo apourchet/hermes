@@ -6,7 +6,7 @@ type Serviceable interface {
 	Server
 }
 
-type EndpointMap []Endpoint
+type EndpointMap []*Endpoint
 
 type Endpoint struct {
 	Handler   string

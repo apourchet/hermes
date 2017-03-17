@@ -1,4 +1,4 @@
-package hermes
+package query
 
 type QueryTemplater func(path string, in interface{}) (string, error)
 

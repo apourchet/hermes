@@ -8,24 +8,28 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/apourchet/hermes/binding"
+	"github.com/apourchet/hermes/client"
+	"github.com/apourchet/hermes/query"
+	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
 
 type Service struct {
-	Client        IClient
-	Resolve       Resolver
-	Bindings      BindingFactorySource
-	QueryTemplate QueryTemplater
+	Client        client.IClient
+	Resolve       resolver.Resolver
+	Bindings      binding.BindingFactorySource
+	QueryTemplate query.QueryTemplater
 
 	serviceable Serviceable
 }
 
 func NewService(svc Serviceable) *Service {
 	out := &Service{}
-	out.Client = DefaultClient
-	out.Resolve = DefaultResolver
-	out.Bindings = DefaultBindingFactorySource
-	out.QueryTemplate = DefaultQueryTemplate
+	out.Client = client.DefaultClient
+	out.Resolve = resolver.DefaultResolver
+	out.Bindings = binding.DefaultBindingFactorySource
+	out.QueryTemplate = query.DefaultQueryTemplate
 
 	out.serviceable = svc
 	return out
@@ -74,7 +78,7 @@ func (s *Service) Serve(e *gin.Engine) error {
 	return nil
 }
 
-func (s *Service) serveEndpoint(e *gin.Engine, ep Endpoint, method reflect.Method) {
+func (s *Service) serveEndpoint(e *gin.Engine, ep *Endpoint, method reflect.Method) {
 	binding := s.Bindings(ep.Path)
 	fn := getGinHandler(s.serviceable, binding, ep, method)
 	e.Handle(ep.Method, ep.Path, fn)
