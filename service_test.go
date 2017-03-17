@@ -75,14 +75,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestMock(t *testing.T) {
-	si := NewMockService(&MyService{})
-	out := &Outbound{false}
-	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
-	assert.Nil(t, err)
-	assert.True(t, out.Ok)
-}
-
 func TestCallSuccess(t *testing.T) {
 	si := NewService(&MyService{})
 	out := &Outbound{false}
