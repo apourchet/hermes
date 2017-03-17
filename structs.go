@@ -6,6 +6,14 @@ type Serviceable interface {
 	Server
 }
 
+type Hosted interface {
+	SNI() string
+}
+
+type Server interface {
+	Endpoints() EndpointMap
+}
+
 type EndpointMap []*Endpoint
 
 type Endpoint struct {
@@ -14,12 +22,4 @@ type Endpoint struct {
 	Path      string
 	NewInput  func() interface{}
 	NewOutput func() interface{}
-}
-
-type Hosted interface {
-	SNI() string
-}
-
-type Server interface {
-	Endpoints() EndpointMap
 }
