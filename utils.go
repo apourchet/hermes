@@ -9,6 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	HERMES_CODE_BYPASS = 0
+)
+
 func findEndpointByHandler(svc Server, name string) (*Endpoint, error) {
 	for _, ep := range svc.Endpoints() {
 		if ep.Handler == name {
@@ -51,7 +55,12 @@ func getGinHandler(svc Serviceable, binders binding.BindingFactory, ep *Endpoint
 		// Call function
 		vals := method.Func.Call(args)
 		code := int(vals[0].Int())
-		if !vals[1].IsNil() {
+		if code == HERMES_CODE_BYPASS {
+			// Bypass code, do nothing here
+			return
+		}
+
+		if !vals[1].IsNil() { // If there was an error
 			errVal := vals[1].Interface().(error)
 			ctx.JSON(code, map[string]string{"message": errVal.Error()})
 		} else if output != nil {
