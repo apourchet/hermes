@@ -7,7 +7,7 @@ Hermes is a simple pseudo-RPC framework in golang. It's built on top of [gin](ht
 // Service definition
 type MyService struct{}
 
-func (s *MyService) Host() string {
+func (s *MyService) SNI() string {
 	return "localhost:9000"
 }
 
@@ -60,7 +60,7 @@ func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOut
 
 ### Server Creation
 ```go
-si := InitService(&MyService{})
+si := NewService(&MyService{})
 engine := gin.New()
 si.Serve(engine)
 go engine.Run(":9000")
@@ -68,7 +68,7 @@ go engine.Run(":9000")
 
 ### Client RPC Call
 ```go
-si := InitService(&MyService{})
+si := NewService(&MyService{})
 out := &Outbound{false}
 code, err := si.Call("RpcCall", &Inbound{"secret"}, out)
 ```
