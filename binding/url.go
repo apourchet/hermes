@@ -227,7 +227,6 @@ func SetField(obj interface{}, fieldname, value string) error {
 		}
 		field.Set(float64(f))
 		break
-	// TODO These are hard
 	case reflect.Slice:
 		var s []interface{}
 		err := json.Unmarshal([]byte(value), &s)
@@ -235,6 +234,7 @@ func SetField(obj interface{}, fieldname, value string) error {
 			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", s, err)
 		}
 		field.Set(s)
+		break
 	case reflect.Map:
 		var m map[string]interface{}
 		err := json.Unmarshal([]byte(value), &m)
@@ -242,6 +242,7 @@ func SetField(obj interface{}, fieldname, value string) error {
 			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", m, err)
 		}
 		field.Set(m)
+		break
 	}
 	return nil
 }

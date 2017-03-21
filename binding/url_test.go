@@ -135,14 +135,18 @@ func TestSetFieldFloat(t *testing.T) {
 
 func TestSetFieldSlice(t *testing.T) {
 	obj := struct {
-		A []string
-		B []int
+		A []interface{}
 	}{}
 	err := SetField(&obj, "a", `["a","b"]`)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(obj.A))
+}
 
-	err = SetField(&obj, "b", `[1,2,3]`)
+func TestSetFieldMap(t *testing.T) {
+	obj := struct {
+		A map[string]interface{}
+	}{}
+	err := SetField(&obj, "a", `{"a":1}`)
 	assert.Nil(t, err)
-	assert.Equal(t, 3, len(obj.B))
+	assert.Equal(t, 1, len(obj.A))
 }
