@@ -4,7 +4,7 @@ import "github.com/apourchet/hermes/binding"
 
 type BindingFactory func(params, queries []string) binding.Binding
 
-var DefaultBindingFactory BindingFactory = JSONBindingFactory
+var DefaultBindingFactory BindingFactory = URLThenJSONBindingFactory
 
 func JSONBindingFactory(_, _ []string) binding.Binding {
 	return &binding.JSONBinding{}
