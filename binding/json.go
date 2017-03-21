@@ -28,7 +28,3 @@ func (_ *JSONBinding) Apply(req *http.Request, obj interface{}) error {
 	req.ContentLength = int64(len(content))
 	return nil
 }
-
-func JSONBindingFactory(_ string) Binding {
-	return &JSONBinding{}
-}

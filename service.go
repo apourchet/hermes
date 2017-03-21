@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/apourchet/hermes/binding"
 	"github.com/apourchet/hermes/client"
+	"github.com/apourchet/hermes/endpoint"
 	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +17,7 @@ import (
 type Service struct {
 	Client   client.IClient
 	Resolve  resolver.Resolver
-	Bindings binding.BindingFactory
+	Bindings BindingFactory
 
 	Scheme string
 
@@ -28,7 +28,7 @@ func NewService(svc Serviceable) *Service {
 	out := &Service{}
 	out.Client = client.DefaultClient
 	out.Resolve = resolver.DefaultResolver
-	out.Bindings = binding.DefaultBindingFactory
+	out.Bindings = DefaultBindingFactory
 
 	out.Scheme = "http"
 
@@ -57,7 +57,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	}
 
 	// Use bindings on request
-	err = s.Bindings(ep.Path).Apply(req, in)
+	err = s.Bindings(ep.Params, ep.Queries).Apply(req, in)
 	if err != nil {
 		return fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
@@ -74,7 +74,6 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	if err != nil {
 		return fmt.Errorf("Client failed read response body: %v", err)
 	}
-	fmt.Println(string(body))
 
 	// Deal with response
 	if resp.StatusCode/100 == 2 {
@@ -112,8 +111,8 @@ func (s *Service) Serve(e *gin.Engine) error {
 	return nil
 }
 
-func (s *Service) serveEndpoint(e *gin.Engine, ep *Endpoint, method reflect.Method) {
-	binding := s.Bindings(ep.Path)
+func (s *Service) serveEndpoint(e *gin.Engine, ep *endpoint.Endpoint, method reflect.Method) {
+	binding := s.Bindings(ep.Params, ep.Queries)
 	fn := getGinHandler(s.serviceable, binding, ep, method)
 	e.Handle(ep.Method, ep.Path, fn)
 }

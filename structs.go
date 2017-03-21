@@ -1,5 +1,7 @@
 package hermes
 
+import "github.com/apourchet/hermes/endpoint"
+
 // Input types. These interfaces must be satisfied by the user
 type Serviceable interface {
 	Hosted
@@ -14,12 +16,6 @@ type Server interface {
 	Endpoints() EndpointMap
 }
 
-type EndpointMap []*Endpoint
+type EndpointMap []*endpoint.Endpoint
 
-type Endpoint struct {
-	Handler   string
-	Method    string
-	Path      string
-	NewInput  func() interface{}
-	NewOutput func() interface{}
-}
+var EP = endpoint.NewEndpoint

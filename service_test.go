@@ -1,4 +1,4 @@
-package hermes
+package hermes_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/apourchet/hermes"
 	"github.com/apourchet/hermes/client"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -23,12 +24,12 @@ func (s *MyService) SNI() string {
 	return "localhost:9000"
 }
 
-func (s *MyService) Endpoints() EndpointMap {
-	return EndpointMap{
-		&Endpoint{"RpcCall", "GET", "/rpccall", NewInbound, NewOutbound},
-		&Endpoint{"RpcCall", "POST", "/rpccall", NewInbound, NewOutbound},
-		&Endpoint{"NoInput", "POST", "/noinput", nil, NewOutbound},
-		&Endpoint{"NoOutput", "POST", "/nooutput", NewInbound, nil},
+func (s *MyService) Endpoints() hermes.EndpointMap {
+	return hermes.EndpointMap{
+		hermes.EP("RpcCall", "GET", "/rpccall", NewInbound, NewOutbound),
+		hermes.EP("RpcCall", "POST", "/rpccall", NewInbound, NewOutbound),
+		hermes.EP("NoInput", "POST", "/noinput", nil, NewOutbound),
+		hermes.EP("NoOutput", "POST", "/nooutput", NewInbound, nil),
 	}
 }
 
@@ -71,12 +72,12 @@ var engine *gin.Engine
 func TestMain(m *testing.M) {
 	engine = gin.New()
 	client.DefaultClient = &client.MockClient{engine}
-	NewService(&MyService{}).Serve(engine)
+	hermes.NewService(&MyService{}).Serve(engine)
 	os.Exit(m.Run())
 }
 
 func TestCallSuccess(t *testing.T) {
-	si := NewService(&MyService{})
+	si := hermes.NewService(&MyService{})
 	out := &Outbound{false}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
 	assert.Nil(t, err)
@@ -84,7 +85,7 @@ func TestCallSuccess(t *testing.T) {
 }
 
 func TestCallWrongSecret(t *testing.T) {
-	si := NewService(&MyService{})
+	si := hermes.NewService(&MyService{})
 	out := &Outbound{true}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
@@ -92,13 +93,13 @@ func TestCallWrongSecret(t *testing.T) {
 }
 
 func TestCallNotFound(t *testing.T) {
-	si := NewService(&MyService{})
+	si := hermes.NewService(&MyService{})
 	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
 
 func TestNoInput(t *testing.T) {
-	si := NewService(&MyService{})
+	si := hermes.NewService(&MyService{})
 	out := &Outbound{false}
 	err := si.Call(context.Background(), "NoInput", nil, out)
 	assert.Nil(t, err)
@@ -106,7 +107,7 @@ func TestNoInput(t *testing.T) {
 }
 
 func TestNoOutput(t *testing.T) {
-	si := NewService(&MyService{})
+	si := hermes.NewService(&MyService{})
 	err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
 	assert.Nil(t, err)
 
