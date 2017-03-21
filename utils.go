@@ -22,7 +22,7 @@ func findEndpointByHandler(svc Server, name string) (*Endpoint, error) {
 	return nil, fmt.Errorf("MethodNotFoundError")
 }
 
-func getGinHandler(svc Serviceable, binders binding.BindingFactory, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
+func getGinHandler(svc Serviceable, binder binding.Binding, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var input interface{}
 		if ep.NewInput != nil {
@@ -36,7 +36,7 @@ func getGinHandler(svc Serviceable, binders binding.BindingFactory, ep *Endpoint
 
 		// Bind input to context
 		if input != nil {
-			err := binders(ctx).Bind(ctx.Request, input)
+			err := binder.Bind(ctx, input)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
 				return

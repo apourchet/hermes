@@ -1,20 +1,16 @@
 package binding
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 )
 
-type BindingFactorySource func(string) BindingFactory
-type BindingFactory func(*gin.Context) binding.Binding
+type Binding interface {
+	Bind(ctx *gin.Context, obj interface{}) error
+	Apply(req *http.Request, obj interface{}) error
+}
 
-var DefaultBindingFactorySource BindingFactorySource = JSONBindingFactorySource
+type BindingFactory func(string) Binding
+
 var DefaultBindingFactory BindingFactory = JSONBindingFactory
-
-func JSONBindingFactorySource(_ string) BindingFactory {
-	return JSONBindingFactory
-}
-
-func JSONBindingFactory(_ *gin.Context) binding.Binding {
-	return binding.JSON
-}

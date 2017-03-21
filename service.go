@@ -1,25 +1,25 @@
 package hermes
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
+	"net/http"
 	"reflect"
 
 	"github.com/apourchet/hermes/binding"
 	"github.com/apourchet/hermes/client"
-	"github.com/apourchet/hermes/query"
 	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
 
 type Service struct {
-	Client        client.IClient
-	Resolve       resolver.Resolver
-	Bindings      binding.BindingFactorySource
-	QueryTemplate query.QueryTemplater
+	Client   client.IClient
+	Resolve  resolver.Resolver
+	Bindings binding.BindingFactory
+
+	Scheme string
 
 	serviceable Serviceable
 }
@@ -28,8 +28,9 @@ func NewService(svc Serviceable) *Service {
 	out := &Service{}
 	out.Client = client.DefaultClient
 	out.Resolve = resolver.DefaultResolver
-	out.Bindings = binding.DefaultBindingFactorySource
-	out.QueryTemplate = query.DefaultQueryTemplate
+	out.Bindings = binding.DefaultBindingFactory
+
+	out.Scheme = "http"
 
 	out.serviceable = svc
 	return out
@@ -37,31 +38,64 @@ func NewService(svc Serviceable) *Service {
 
 func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
 	svc := s.serviceable
+	// Get endpoint
 	ep, err := findEndpointByHandler(svc, name)
 	if err != nil {
-		return err
+		return fmt.Errorf("Client failed to find endpoint: %v", err)
 	}
 
-	var body io.Reader
-	if in != nil {
-		inData, err := json.Marshal(in)
-		if err != nil {
-			return err
+	// Resolve URL
+	url, err := s.Resolve(svc.SNI(), ep.Path)
+	if err != nil {
+		return fmt.Errorf("Client failed to resolve url: %v", err)
+	}
+
+	// Create new request
+	req, err := http.NewRequest(ep.Method, fmt.Sprintf("%s://%s", s.Scheme, url), nil)
+	if err != nil {
+		return fmt.Errorf("Client failed to create new http request")
+	}
+
+	// Use bindings on request
+	err = s.Bindings(ep.Path).Apply(req, in)
+	if err != nil {
+		return fmt.Errorf("Client failed to apply a binding: %v", err)
+	}
+
+	// Execute request
+	resp, err := s.Client.Exec(ctx, req)
+	if err != nil {
+		return fmt.Errorf("Client failed execute request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read in response
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("Client failed read response body: %v", err)
+	}
+	fmt.Println(string(body))
+
+	// Deal with response
+	if resp.StatusCode/100 == 2 {
+		if out != nil {
+			if err := json.Unmarshal(body, out); err != nil {
+				return fmt.Errorf("Client failed to unmarshal response into output: %v", err)
+			}
 		}
-		body = bytes.NewBuffer(inData)
+		return nil
 	}
 
-	fullpath, err := s.QueryTemplate(ep.Path, in)
+	// There was an error
+	tmp := map[string]string{}
+	err = json.Unmarshal(body, &tmp)
 	if err != nil {
-		return err
+		return fmt.Errorf("Client failed to parse error response: %v", err)
 	}
-
-	url, err := s.Resolve(svc.SNI(), fullpath)
-	if err != nil {
-		return err
+	if message, found := tmp["message"]; found {
+		return fmt.Errorf(message)
 	}
-
-	return s.Client.Exec(ctx, url, ep.Method, body, out)
+	return fmt.Errorf("Client failed to find error message. Status code was %d.", resp.StatusCode)
 }
 
 func (s *Service) Serve(e *gin.Engine) error {

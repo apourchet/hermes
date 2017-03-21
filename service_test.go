@@ -25,8 +25,8 @@ func (s *MyService) SNI() string {
 
 func (s *MyService) Endpoints() EndpointMap {
 	return EndpointMap{
-		&Endpoint{"RpcCall", "POST", "/rpccall", NewInbound, NewOutbound},
 		&Endpoint{"RpcCall", "GET", "/rpccall", NewInbound, NewOutbound},
+		&Endpoint{"RpcCall", "POST", "/rpccall", NewInbound, NewOutbound},
 		&Endpoint{"NoInput", "POST", "/noinput", nil, NewOutbound},
 		&Endpoint{"NoOutput", "POST", "/nooutput", NewInbound, nil},
 	}
@@ -70,7 +70,7 @@ var engine *gin.Engine
 
 func TestMain(m *testing.M) {
 	engine = gin.New()
-	client.DefaultClient = &client.MockClient{"http", engine}
+	client.DefaultClient = &client.MockClient{engine}
 	NewService(&MyService{}).Serve(engine)
 	os.Exit(m.Run())
 }
