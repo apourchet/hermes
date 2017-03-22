@@ -20,9 +20,7 @@ func init() {
 // Service definition
 type MyService struct{}
 
-func (s *MyService) SNI() string {
-	return "localhost:9000"
-}
+func (s *MyService) SNI() string { return "localhost:9000" }
 
 func (s *MyService) Endpoints() hermes.EndpointMap {
 	return hermes.EndpointMap{
@@ -30,20 +28,28 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 		hermes.EP("RpcCall", "POST", "/rpccall", NewInbound, NewOutbound),
 		hermes.EP("NoInput", "POST", "/noinput", nil, NewOutbound),
 		hermes.EP("NoOutput", "POST", "/nooutput", NewInbound, nil),
+		hermes.EP("Paramed", "GET", "/paramed/:action", NewAction, nil).Param("action"),
+		hermes.EP("Queried", "GET", "/queried", NewAction, nil).Query("action"),
+		hermes.EP("Sliced", "GET", "/sliced", NewSlice, nil),
+		hermes.EP("Pointers", "GET", "/pointers", NewPointers, nil),
 	}
 }
 
 // Endpoint definitions
-type Inbound struct {
-	Message string
-}
-
-type Outbound struct {
-	Ok bool
+type Inbound struct{ Message string }
+type Outbound struct{ Ok bool }
+type Action struct{ Action int }
+type Slice []string
+type Pointers struct {
+	I *int
+	S *string
 }
 
 func NewInbound() interface{}  { return &Inbound{} }
 func NewOutbound() interface{} { return &Outbound{} }
+func NewAction() interface{}   { return &Action{} }
+func NewSlice() interface{}    { return &Slice{} }
+func NewPointers() interface{} { return &Pointers{} }
 
 func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {
@@ -66,18 +72,47 @@ func (s *MyService) NoOutput(c context.Context, in *Inbound) (int, error) {
 	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
 }
 
+func (s *MyService) Paramed(c context.Context, in *Action) (int, error) {
+	if in.Action == 69 {
+		return http.StatusOK, nil
+	}
+	return http.StatusBadRequest, fmt.Errorf("Action should be %d", 69)
+}
+
+func (s *MyService) Queried(c context.Context, in *Action) (int, error) {
+	if in.Action == 69 {
+		return http.StatusOK, nil
+	}
+	return http.StatusBadRequest, fmt.Errorf("Action should be %d", 69)
+}
+
+func (s *MyService) Sliced(c context.Context, in *Slice) (int, error) {
+	if len(*in) == 2 {
+		return http.StatusOK, nil
+	}
+	return http.StatusBadRequest, fmt.Errorf("Slice should have length 2")
+}
+
+func (s *MyService) Pointers(c context.Context, in *Pointers) (int, error) {
+	if in.I != nil && *in.I == 69 && in.S == nil {
+		return http.StatusOK, nil
+	}
+	return http.StatusBadRequest, fmt.Errorf("Should be 69 and nil; have %v and %v", in.I, in.S)
+}
+
 // Tests
 var engine *gin.Engine
+var si *hermes.Service
 
 func TestMain(m *testing.M) {
 	engine = gin.New()
 	client.DefaultClient = &client.MockClient{engine}
-	hermes.NewService(&MyService{}).Serve(engine)
+	si = hermes.NewService(&MyService{})
+	si.Serve(engine)
 	os.Exit(m.Run())
 }
 
 func TestCallSuccess(t *testing.T) {
-	si := hermes.NewService(&MyService{})
 	out := &Outbound{false}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
 	assert.Nil(t, err)
@@ -85,7 +120,6 @@ func TestCallSuccess(t *testing.T) {
 }
 
 func TestCallWrongSecret(t *testing.T) {
-	si := hermes.NewService(&MyService{})
 	out := &Outbound{true}
 	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
@@ -93,13 +127,11 @@ func TestCallWrongSecret(t *testing.T) {
 }
 
 func TestCallNotFound(t *testing.T) {
-	si := hermes.NewService(&MyService{})
 	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
 
 func TestNoInput(t *testing.T) {
-	si := hermes.NewService(&MyService{})
 	out := &Outbound{false}
 	err := si.Call(context.Background(), "NoInput", nil, out)
 	assert.Nil(t, err)
@@ -107,7 +139,6 @@ func TestNoInput(t *testing.T) {
 }
 
 func TestNoOutput(t *testing.T) {
-	si := hermes.NewService(&MyService{})
 	err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
 	assert.Nil(t, err)
 
@@ -115,12 +146,36 @@ func TestNoOutput(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-// func TestQueryParamsString(t *testing.T) {
-// 	req, _ := http.NewRequest("GET", "http://localhost:9000/test?message=secret", nil)
-// 	w := httptest.NewRecorder()
-// 	engine.ServeHTTP(w, req)
-// 	resp := w.Result()
-// 	assert.NotNil(t, resp)
-// 	content, _ := ioutil.ReadAll(resp.Body)
-// 	assert.Equal(t, string(content), "hello")
-// }
+func TestParamed(t *testing.T) {
+	err := si.Call(context.Background(), "Paramed", &Action{69}, nil)
+	assert.Nil(t, err)
+
+	err = si.Call(context.Background(), "Paramed", &Action{13}, nil)
+	assert.NotNil(t, err)
+}
+
+func TestQueried(t *testing.T) {
+	err := si.Call(context.Background(), "Queried", &Action{69}, nil)
+	assert.Nil(t, err)
+
+	err = si.Call(context.Background(), "Queried", &Action{13}, nil)
+	assert.NotNil(t, err)
+}
+
+func TestSliced(t *testing.T) {
+	err := si.Call(context.Background(), "Sliced", &Slice{"a", "b"}, nil)
+	assert.Nil(t, err)
+
+	err = si.Call(context.Background(), "Sliced", nil, nil)
+	assert.NotNil(t, err)
+}
+
+func TestPointers(t *testing.T) {
+	s := ""
+	i := 69
+	err := si.Call(context.Background(), "Pointers", &Pointers{&i, &s}, nil)
+	assert.NotNil(t, err)
+
+	err = si.Call(context.Background(), "Pointers", &Pointers{&i, nil}, nil)
+	assert.Nil(t, err)
+}

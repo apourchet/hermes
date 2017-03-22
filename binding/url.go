@@ -78,14 +78,27 @@ func (b *URLBinding) TransformURL(path string, input interface{}) (string, error
 		return path, nil
 	}
 
+	v := reflect.ValueOf(input)
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if v.IsNil() { // If the chain ends in a nil, skip this
+			return path, nil
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return path, nil
+	}
+
 	rawFields := structs.Map(input)
 	fields := map[string]string{}
 	for name, value := range rawFields {
-		value, err := Stringify(value)
+		skip, value, err := Stringify(value)
 		if err != nil {
 			return "", fmt.Errorf("Failed to construct path: %v", err)
+		} else if !skip {
+			fields[strings.ToLower(name)] = value
 		}
-		fields[strings.ToLower(name)] = value
 	}
 
 	for _, param := range b.Params {
@@ -107,27 +120,36 @@ func (b *URLBinding) TransformURL(path string, input interface{}) (string, error
 	return path, nil
 }
 
-func Stringify(val interface{}) (string, error) {
+func Stringify(val interface{}) (bool, string, error) {
 	v := reflect.ValueOf(val)
+
+	// Path down the chain of pointers until a non-pointer kind
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if v.IsNil() { // If the chain ends in a nil, skip this
+			return true, "", nil
+		}
+		v = v.Elem()
+	}
+
 	switch v.Kind() {
 	case reflect.Bool:
-		return fmt.Sprintf("%v", v.Bool()), nil
+		return false, fmt.Sprintf("%v", v.Bool()), nil
 	case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64:
-		return fmt.Sprintf("%v", v.Int()), nil
+		return false, fmt.Sprintf("%v", v.Int()), nil
 	case reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
-		return fmt.Sprintf("%v", v.Uint()), nil
+		return false, fmt.Sprintf("%v", v.Uint()), nil
 	case reflect.Float32, reflect.Float64:
-		return fmt.Sprintf("%v", v.Float()), nil
+		return false, fmt.Sprintf("%v", v.Float()), nil
 	case reflect.String:
-		return fmt.Sprintf("%v", v.String()), nil
+		return false, fmt.Sprintf("%v", v.String()), nil
 	case reflect.Slice, reflect.Map:
 		content, err := json.Marshal(val)
 		if err != nil {
-			return "", fmt.Errorf("Failed to stringify value into url: %v", err)
+			return false, "", fmt.Errorf("Failed to stringify value into url: %v", err)
 		}
-		return string(content), nil
+		return false, string(content), nil
 	}
-	return "", fmt.Errorf("Unsupported type: %T", val)
+	return false, "", fmt.Errorf("Unsupported type: %T", val)
 }
 
 // Sets the field of the object using a string that

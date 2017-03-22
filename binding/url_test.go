@@ -26,11 +26,30 @@ func TestTransformURLParams(t *testing.T) {
 	assert.Equal(t, "http://something.com/api/v1/myname/2", path)
 }
 
+func TestTransformURLParamNil(t *testing.T) {
+	input := struct {
+		Param1 *string
+		Param2 *int
+	}{}
+	p1 := "myname"
+	input.Param1 = &p1
+
+	_, err := binding1.TransformURL("http://something.com/api/v1/:param1/:param2", input)
+	assert.NotNil(t, err)
+}
+
 func TestTransformURLQuery(t *testing.T) {
 	input := struct{ Query1 string }{"myname"}
 	path, err := binding1.TransformURL("http://something.com/api/v1/test", input)
 	assert.Nil(t, err)
 	assert.Equal(t, "http://something.com/api/v1/test?query1=myname", path)
+}
+
+func TestTransformURLQueryNil(t *testing.T) {
+	input := struct{ Query1 *string }{}
+	path, err := binding1.TransformURL("http://something.com/api/v1/test", input)
+	assert.Nil(t, err)
+	assert.Equal(t, "http://something.com/api/v1/test", path)
 }
 
 func TestTransformURLQueries(t *testing.T) {
