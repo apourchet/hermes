@@ -21,12 +21,12 @@ func NewEndpoint(handler, method, path string, input, output func() interface{})
 	return ep
 }
 
-func (ep *Endpoint) Param(varname string) *Endpoint {
-	ep.Params = append(ep.Params, varname)
+func (ep *Endpoint) Param(varnames ...string) *Endpoint {
+	ep.Params = append(ep.Params, varnames...)
 	return ep
 }
 
-func (ep *Endpoint) Query(varname string) *Endpoint {
-	ep.Queries = append(ep.Queries, varname)
+func (ep *Endpoint) Query(varnames ...string) *Endpoint {
+	ep.Queries = append(ep.Queries, varnames...)
 	return ep
 }

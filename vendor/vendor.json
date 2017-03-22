@@ -34,6 +34,12 @@
 			"revisionTime": "2016-05-25T12:45:45Z"
 		},
 		{
+			"checksumSHA1": "HmbftipkadrLlCfzzVQ+iFHbl6g=",
+			"path": "github.com/golang/glog",
+			"revision": "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+			"revisionTime": "2016-01-25T20:49:56Z"
+		},
+		{
 			"checksumSHA1": "sZSeW3Dc6lUqm1CzMUdu3poimoA=",
 			"origin": "github.com/gin-gonic/gin/vendor/github.com/golang/protobuf/proto",
 			"path": "github.com/golang/protobuf/proto",
