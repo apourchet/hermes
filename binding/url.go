@@ -155,116 +155,126 @@ func Stringify(val interface{}) (bool, string, error) {
 // Sets the field of the object using a string that
 // was retrieved from the URI of the request
 func SetField(obj interface{}, fieldname, value string) error {
-	// TODO
-	fields := structs.New(obj).Fields()
-	var field *structs.Field
-	for _, field = range fields {
-		if strings.ToLower(field.Name()) == fieldname {
-			break
+	v := reflect.ValueOf(obj)
+
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return nil
 		}
+		v = v.Elem()
 	}
 
-	if field == nil {
+	if v.Kind() != reflect.Struct {
+		return nil
+	}
+
+	field := v.FieldByNameFunc(func(a string) bool { return strings.ToLower(a) == fieldname })
+
+	if !field.IsValid() {
 		return fmt.Errorf("Field not found when binding: %s", fieldname)
 	}
 
-	switch field.Kind() {
+	val, err := ParseString(field.Type(), value)
+	if err != nil {
+		return fmt.Errorf("Failed to parse value: %v", err)
+	}
+
+	field.Set(val)
+	return nil
+}
+
+func ParseString(t reflect.Type, value string) (reflect.Value, error) {
+	switch t.Kind() {
+	case reflect.Ptr:
+		subval, err := ParseString(t.Elem(), value)
+		if err != nil {
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %s: %v", t, err)
+		}
+		val := reflect.New(t.Elem())
+		val.Elem().Set(subval)
+		return val, nil
 	case reflect.Bool:
 		b, err := strconv.ParseBool(value)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", b, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", b, err)
 		}
-		field.Set(b)
-		break
+		return reflect.ValueOf(b), nil
 	case reflect.String:
-		field.Set(value)
-		break
+		return reflect.ValueOf(value), nil
 	case reflect.Int:
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(int(i))
-		break
+		return reflect.ValueOf(int(i)), nil
 	case reflect.Int8:
 		i, err := strconv.ParseInt(value, 10, 8)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(int8(i))
-		break
+		return reflect.ValueOf(int8(i)), nil
 	case reflect.Int32:
 		i, err := strconv.ParseInt(value, 10, 32)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(int32(i))
-		break
+		return reflect.ValueOf(int32(i)), nil
 	case reflect.Int64:
 		i, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(int64(i))
-		break
+		return reflect.ValueOf(int64(i)), nil
 	case reflect.Uint:
 		i, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(uint(i))
-		break
+		return reflect.ValueOf(uint(i)), nil
 	case reflect.Uint8:
 		i, err := strconv.ParseUint(value, 10, 8)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(uint8(i))
-		break
+		return reflect.ValueOf(uint8(i)), nil
 	case reflect.Uint32:
 		i, err := strconv.ParseUint(value, 10, 32)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(uint32(i))
-		break
+		return reflect.ValueOf(uint32(i)), nil
 	case reflect.Uint64:
 		i, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", i, err)
 		}
-		field.Set(uint64(i))
-		break
+		return reflect.ValueOf(uint64(i)), nil
 	case reflect.Float32:
 		f, err := strconv.ParseFloat(value, 32)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", f, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", f, err)
 		}
-		field.Set(float32(f))
-		break
+		return reflect.ValueOf(float32(f)), nil
 	case reflect.Float64:
 		f, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", f, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", f, err)
 		}
-		field.Set(float64(f))
-		break
+		return reflect.ValueOf(float64(f)), nil
 	case reflect.Slice:
 		var s []interface{}
 		err := json.Unmarshal([]byte(value), &s)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", s, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", s, err)
 		}
-		field.Set(s)
-		break
+		return reflect.ValueOf(s), nil
 	case reflect.Map:
 		var m map[string]interface{}
 		err := json.Unmarshal([]byte(value), &m)
 		if err != nil {
-			return fmt.Errorf("Failed to parse url parameter/query to %T: %v", m, err)
+			return reflect.ValueOf(nil), fmt.Errorf("Failed to parse url parameter/query to %T: %v", m, err)
 		}
-		field.Set(m)
-		break
+		return reflect.ValueOf(m), nil
 	}
-	return nil
+	return reflect.ValueOf(nil), fmt.Errorf("Unsupported type: %v", t)
 }

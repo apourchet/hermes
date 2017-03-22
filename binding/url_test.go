@@ -90,6 +90,16 @@ func TestSetFieldBool(t *testing.T) {
 	assert.Equal(t, true, obj.Field1)
 }
 
+func TestSetFieldPointer(t *testing.T) {
+	obj := struct {
+		A *bool
+	}{}
+	err := SetField(&obj, "a", "true")
+	assert.Nil(t, err)
+	assert.NotNil(t, obj.A)
+	assert.Equal(t, true, *obj.A)
+}
+
 func TestSetFieldInt(t *testing.T) {
 	obj := struct {
 		A int
