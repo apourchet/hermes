@@ -104,7 +104,7 @@ func (s *Service) Serve(e *gin.Engine) error {
 	for _, ep := range endpoints {
 		method, ok := serviceType.MethodByName(ep.Handler)
 		if !ok {
-			return fmt.Errorf("Endpoint '%s' does not match any method of the type %t", ep.Handler, serviceType)
+			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, serviceType)
 		}
 		s.serveEndpoint(e, ep, method)
 	}
