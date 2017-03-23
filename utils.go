@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	HERMES_CODE_BYPASS = 0
+	HERMES_CODE_BYPASS = -1
 )
 
 func findEndpointByHandler(svc Server, name string) (*endpoint.Endpoint, error) {
