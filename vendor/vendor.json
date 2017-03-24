@@ -16,10 +16,10 @@
 			"revisionTime": "2017-01-03T08:10:50Z"
 		},
 		{
-			"checksumSHA1": "0tLUaPu821o4eu5/hQ0wVUQifPU=",
+			"checksumSHA1": "RsNwOto8G8aXIiRrlFn4dtU9q/g=",
 			"path": "github.com/gin-gonic/gin",
-			"revision": "f931d1ea80ae95a6fc739213cdd9399bd2967fb6",
-			"revisionTime": "2016-05-25T12:45:45Z"
+			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
+			"revisionTime": "2016-12-04T22:13:08Z"
 		},
 		{
 			"checksumSHA1": "UsILDoIB2S7ra+w2fMdb85mX3HM=",
@@ -54,6 +54,12 @@
 			"revisionTime": "2016-05-25T12:45:45Z"
 		},
 		{
+			"checksumSHA1": "U6lX43KDDlNOn+Z0Yyww+ZzHfFo=",
+			"path": "github.com/mattn/go-isatty",
+			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
+			"revisionTime": "2017-03-22T23:44:13Z"
+		},
+		{
 			"checksumSHA1": "zKKp5SZ3d3ycKe4EKMNT0BqAWBw=",
 			"origin": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
@@ -77,6 +83,12 @@
 			"path": "golang.org/x/net/context/ctxhttp",
 			"revision": "e2ba55e4e78399d85f2a0e0b92396b81ed410633",
 			"revisionTime": "2016-08-02T15:44:32Z"
+		},
+		{
+			"checksumSHA1": "92lp1kcQB5hfAhtiXbwWt1ASy9U=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "8fd966b47dbdd4faa03de0d06e3d733baeb9a1a9",
+			"revisionTime": "2016-04-10T19:02:41Z"
 		},
 		{
 			"checksumSHA1": "39V1idWER42Lmcmg2Uy40wMzOlo=",
