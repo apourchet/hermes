@@ -57,7 +57,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	}
 
 	// Use bindings on request
-	err = s.Bindings(ep.Params, ep.Queries).Apply(req, in)
+	err = s.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(req, in)
 	if err != nil {
 		return fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
@@ -112,7 +112,7 @@ func (s *Service) Serve(e *gin.Engine) error {
 }
 
 func (s *Service) serveEndpoint(e *gin.Engine, ep *endpoint.Endpoint, method reflect.Method) {
-	binding := s.Bindings(ep.Params, ep.Queries)
+	binding := s.Bindings(ep.Params, ep.Queries, ep.Headers)
 	fn := getGinHandler(s.serviceable, binding, ep, method)
 	e.Handle(ep.Method, ep.Path, fn)
 }

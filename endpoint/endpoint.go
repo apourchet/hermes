@@ -9,6 +9,7 @@ type Endpoint struct {
 
 	Params  []string
 	Queries []string
+	Headers map[string]string
 }
 
 func NewEndpoint(handler, method, path string, input, output func() interface{}) *Endpoint {
@@ -28,5 +29,10 @@ func (ep *Endpoint) Param(varnames ...string) *Endpoint {
 
 func (ep *Endpoint) Query(varnames ...string) *Endpoint {
 	ep.Queries = append(ep.Queries, varnames...)
+	return ep
+}
+
+func (ep *Endpoint) Header(varname, fieldname string) *Endpoint {
+	ep.Headers[varname] = fieldname
 	return ep
 }
