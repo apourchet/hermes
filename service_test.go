@@ -25,17 +25,16 @@ func (s *MyService) SNI() string { return "localhost:9000" }
 
 func (s *MyService) Endpoints() hermes.EndpointMap {
 	return hermes.EndpointMap{
-		hermes.EP("RpcCall", "GET", "/rpccall", NewInbound, NewOutbound),
-		hermes.EP("RpcCall", "POST", "/rpccall", NewInbound, NewOutbound),
-		hermes.EP("NoInput", "POST", "/noinput", nil, NewOutbound),
-		hermes.EP("NoOutput", "POST", "/nooutput", NewInbound, nil),
-		hermes.EP("Sliced", "GET", "/sliced", NewSlice, nil),
-		hermes.EP("Pointers", "GET", "/pointers", NewPointers, nil),
-		hermes.EP("AllTypes", "GET", "/alltypes", NewAllTypes, nil),
+		hermes.EP("RpcCall", "GET", "/rpccall", Inbound{}, Outbound{}),
+		hermes.EP("NoInput", "POST", "/noinput", nil, Outbound{}),
+		hermes.EP("NoOutput", "POST", "/nooutput", Inbound{}, nil),
+		hermes.EP("Sliced", "GET", "/sliced", Slice{}, nil),
+		hermes.EP("Pointers", "GET", "/pointers", Pointers{}, nil),
+		hermes.EP("AllTypes", "GET", "/alltypes", AllTypes{}, nil),
 
-		hermes.EP("QueryPointers", "GET", "/parampointers", NewPointers, nil).Query("i", "s"),
-		hermes.EP("Paramed", "GET", "/paramed/:action", NewAction, nil).Param("action"),
-		hermes.EP("Queried", "GET", "/queried", NewAction, nil).Query("action"),
+		hermes.EP("QueryPointers", "GET", "/parampointers", Pointers{}, nil).Query("i", "s"),
+		hermes.EP("Paramed", "GET", "/paramed/:action", Action{}, nil).Param("action"),
+		hermes.EP("Queried", "GET", "/queried", Action{}, nil).Query("action"),
 	}
 }
 
@@ -63,13 +62,6 @@ type AllTypes struct {
 		F *float64
 	}
 }
-
-func NewInbound() interface{}  { return &Inbound{} }
-func NewOutbound() interface{} { return &Outbound{} }
-func NewAction() interface{}   { return &Action{} }
-func NewSlice() interface{}    { return &Slice{} }
-func NewPointers() interface{} { return &Pointers{} }
-func NewAllTypes() interface{} { return &AllTypes{} }
 
 func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {

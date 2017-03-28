@@ -1,24 +1,32 @@
 package endpoint
 
+import "reflect"
+
 type Endpoint struct {
-	Handler   string
-	Method    string
-	Path      string
-	NewInput  func() interface{}
-	NewOutput func() interface{}
+	Handler    string
+	Method     string
+	Path       string
+	InputType  reflect.Type
+	OutputType reflect.Type
 
 	Params  []string
 	Queries []string
 	Headers map[string]string
 }
 
-func NewEndpoint(handler, method, path string, input, output func() interface{}) *Endpoint {
+func NewEndpoint(handler, method, path string, input, output interface{}) *Endpoint {
 	ep := &Endpoint{}
 	ep.Handler = handler
 	ep.Method = method
 	ep.Path = path
-	ep.NewInput = input
-	ep.NewOutput = output
+
+	if input != nil {
+		ep.InputType = reflect.TypeOf(input)
+	}
+
+	if output != nil {
+		ep.OutputType = reflect.TypeOf(output)
+	}
 	return ep
 }
 

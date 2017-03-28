@@ -25,19 +25,19 @@ func findEndpointByHandler(svc IServer, name string) (*endpoint.Endpoint, error)
 
 func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var input interface{}
-		if ep.NewInput != nil {
-			input = ep.NewInput()
+		var input reflect.Value
+		if ep.InputType != nil {
+			input = reflect.New(ep.InputType)
 		}
 
-		var output interface{}
-		if ep.NewOutput != nil {
-			output = ep.NewOutput()
+		var output reflect.Value
+		if ep.OutputType != nil {
+			output = reflect.New(ep.OutputType)
 		}
 
 		// Bind input to context
-		if input != nil {
-			err := binder.Bind(ctx, input)
+		if input.IsValid() {
+			err := binder.Bind(ctx, input.Interface())
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
 				return
@@ -46,11 +46,11 @@ func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, m
 
 		// Prepare arguments to function
 		args := []reflect.Value{reflect.ValueOf(svc), reflect.ValueOf(ctx)}
-		if input != nil {
-			args = append(args, reflect.ValueOf(input))
+		if input.IsValid() {
+			args = append(args, input)
 		}
-		if output != nil {
-			args = append(args, reflect.ValueOf(output))
+		if output.IsValid() {
+			args = append(args, output)
 		}
 
 		// Call function
@@ -64,8 +64,8 @@ func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, m
 		if !vals[1].IsNil() { // If there was an error
 			errVal := vals[1].Interface().(error)
 			ctx.JSON(code, map[string]string{"message": errVal.Error()})
-		} else if output != nil {
-			ctx.JSON(code, output)
+		} else if output.IsValid() {
+			ctx.JSON(code, output.Interface())
 		}
 	}
 }
