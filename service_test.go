@@ -31,6 +31,7 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 		hermes.EP("Sliced", "GET", "/sliced", Slice{}, nil),
 		hermes.EP("Pointers", "GET", "/pointers", Pointers{}, nil),
 		hermes.EP("AllTypes", "GET", "/alltypes", AllTypes{}, nil),
+		hermes.EP("RawType", "GET", "/rawtype", 0, ""),
 
 		hermes.EP("QueryPointers", "GET", "/parampointers", Pointers{}, nil).Query("i", "s"),
 		hermes.EP("Paramed", "GET", "/paramed/:action", Action{}, nil).Param("action"),
@@ -143,6 +144,12 @@ func (s *MyService) AllTypes(c context.Context, in *AllTypes) (int, error) {
 	return http.StatusBadRequest, fmt.Errorf("Wanted %v, got %v", wanted, in)
 }
 
+func (s *MyService) RawType(c context.Context, in *int, out *string) (int, error) {
+	str := fmt.Sprintf("%d", *in)
+	*out = str
+	return http.StatusOK, nil
+}
+
 // Tests
 var engine *gin.Engine
 var si *hermes.Service
@@ -228,6 +235,14 @@ func TestAllTypes(t *testing.T) {
 
 	err := si.Call(context.Background(), "AllTypes", input, nil)
 	assert.Nil(t, err)
+}
+
+func TestRawType(t *testing.T) {
+	in := 13
+	out := ""
+	err := si.Call(context.Background(), "RawType", &in, &out)
+	assert.Nil(t, err)
+	assert.Equal(t, "13", out)
 }
 
 func TestQueryPointers(t *testing.T) {
