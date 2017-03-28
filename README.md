@@ -11,25 +11,17 @@ func (s *MyService) SNI() string {
 	return "localhost:9000"
 }
 
-func (s *MyService) Endpoints() EndpointMap {
-	return EndpointMap{
-		Endpoint{"RpcCall", "GET", "/test", NewInbound, NewOutbound}, 
-		Endpoint{"OtherRpcCall", "POST", "/test", NewOtherInbound, NewOtherOutbound},
+func (s *MyService) Endpoints() hermes.EndpointMap {
+	return hermes.EndpointMap{
+		hermes.EP("RpcCall", "GET", "/test", Inbount{}, Outbound{}), 
+		hermes.EP("OtherRpcCall", "POST", "/test", OtherInbound{}, OtherOutbound{}),
 	}
 }
 
 // Endpoint definitions
 // RpcCall
-type Inbound struct {
-	Message string
-}
-
-type Outbound struct {
-	Ok bool
-}
-
-func NewInbound() interface{}  { return &Inbound{} }
-func NewOutbound() interface{} { return &Outbound{} }
+type Inbound struct { Message string }
+type Outbound struct { Ok bool }
 
 func (s *MyService) RpcCall(c *gin.Context, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {
@@ -37,20 +29,12 @@ func (s *MyService) RpcCall(c *gin.Context, in *Inbound, out *Outbound) (int, er
 		return http.StatusOK, nil
 	}
 	out.Ok = false
-	return http.StatusBadRequest, nil
+	return http.StatusBadRequest, fmt.Errorf("Wrong secret!")
 }
 
 // OtherRpcCall
-type OtherInbound struct {
-    MyField int
-}
-
-type OtherOutbound struct {
-    SomeFloat float64
-}
-
-func NewOtherInbound() interface{}  { return &OtherInbound{} }
-func NewOtherOutbound() interface{} { return &OtherOutbound{} }
+type OtherInbound struct { MyField int }
+type OtherOutbound struct { SomeFloat float64 }
 
 func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOutbound) (int, error) {
     out.SomeFloat = 3.14 * in.MyField
@@ -60,15 +44,15 @@ func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOut
 
 ### Server Creation
 ```go
-si := NewService(&MyService{})
 engine := gin.New()
+si := hermes.NewService(&MyService{})
 si.Serve(engine)
-go engine.Run(":9000")
+engine.Run(":9000")
 ```
 
 ### Client RPC Call
 ```go
-si := NewService(&MyService{})
+si := hermes.NewService(&MyService{})
 out := &Outbound{false}
 code, err := si.Call("RpcCall", &Inbound{"secret"}, out)
 ```
