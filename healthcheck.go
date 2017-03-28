@@ -13,4 +13,4 @@ func (svc HealthCheckService) Endpoints() EndpointMap {
 
 func (svc HealthCheckService) Healthz(context.Context) (int, error) { return http.StatusOK, nil }
 
-var DefaultHealthCheck IServer = HealthCheckService{}
+var DefaultHealthCheck Servable = NewServable(HealthCheckService{}, DefaultBindingFactory)
