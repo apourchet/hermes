@@ -32,6 +32,7 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 		hermes.EP("Pointers", "GET", "/pointers", Pointers{}, nil),
 		hermes.EP("AllTypes", "GET", "/alltypes", AllTypes{}, nil),
 		hermes.EP("RawType", "GET", "/rawtype", 0, ""),
+		hermes.EP("RawMap", "GET", "/rawmap", map[string]string{}, map[string]int{}),
 
 		hermes.EP("QueryPointers", "GET", "/parampointers", Pointers{}, nil).Query("i", "s"),
 		hermes.EP("Paramed", "GET", "/paramed/:action", Action{}, nil).Param("action"),
@@ -150,6 +151,15 @@ func (s *MyService) RawType(c context.Context, in *int, out *string) (int, error
 	return http.StatusOK, nil
 }
 
+func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[string]int) (int, error) {
+	*out = map[string]int{}
+	fmt.Println(in, out)
+	for k, v := range *in {
+		(*out)[k+v] = 13
+	}
+	return http.StatusOK, nil
+}
+
 // Tests
 var engine *gin.Engine
 var si *hermes.Service
@@ -243,6 +253,15 @@ func TestRawType(t *testing.T) {
 	err := si.Call(context.Background(), "RawType", &in, &out)
 	assert.Nil(t, err)
 	assert.Equal(t, "13", out)
+}
+
+func TestRawMap(t *testing.T) {
+	in := map[string]string{"a": "b"}
+	out := map[string]int{}
+	err := si.Call(context.Background(), "RawMap", &in, &out)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(out))
+	assert.Equal(t, 13, out["ab"])
 }
 
 func TestQueryPointers(t *testing.T) {
