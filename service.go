@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 
 	"github.com/apourchet/hermes/client"
-	"github.com/apourchet/hermes/endpoint"
 	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
@@ -21,10 +19,10 @@ type Service struct {
 
 	Scheme string
 
-	serviceable Serviceable
+	serviceable IServiceable
 }
 
-func NewService(svc Serviceable) *Service {
+func NewService(svc IServiceable) *Service {
 	out := &Service{}
 	out.Client = client.DefaultClient
 	out.Resolve = resolver.DefaultResolver
@@ -97,22 +95,6 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) er
 	return fmt.Errorf("Client failed to find error message. Status code was %d.", resp.StatusCode)
 }
 
-func (s *Service) Serve(e *gin.Engine) error {
-	svc := s.serviceable
-	serviceType := reflect.TypeOf(svc)
-	endpoints := svc.Endpoints()
-	for _, ep := range endpoints {
-		method, ok := serviceType.MethodByName(ep.Handler)
-		if !ok {
-			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, serviceType)
-		}
-		s.serveEndpoint(e, ep, method)
-	}
-	return nil
-}
-
-func (s *Service) serveEndpoint(e *gin.Engine, ep *endpoint.Endpoint, method reflect.Method) {
-	binding := s.Bindings(ep.Params, ep.Queries, ep.Headers)
-	fn := getGinHandler(s.serviceable, binding, ep, method)
-	e.Handle(ep.Method, ep.Path, fn)
+func (svc *Service) Serve(engine *gin.Engine) error {
+	return NewServable(svc.serviceable, svc.Bindings).Serve(engine)
 }
