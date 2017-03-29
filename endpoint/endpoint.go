@@ -19,6 +19,7 @@ func NewEndpoint(handler, method, path string, input, output interface{}) *Endpo
 	ep.Handler = handler
 	ep.Method = method
 	ep.Path = path
+	ep.Headers = map[string]string{}
 
 	if input != nil {
 		ep.InputType = reflect.TypeOf(input)
