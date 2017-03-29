@@ -8,35 +8,22 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/gin-gonic/gin"
-	"github.com/golang/glog"
 )
 
 type HeaderBinding struct {
 	Headers map[string]string
 }
 
-const (
-	IGNORE_MULTIPLE_HEADERVALS = 1
-)
-
-var HeaderFlags = 0 | IGNORE_MULTIPLE_HEADERVALS
-
 func (b *HeaderBinding) Bind(ctx *gin.Context, obj interface{}) error {
 	for headerKey, field := range b.Headers {
-		vals, ok := ctx.Request.Header[headerKey]
-		if ok && len(vals) > 0 {
-			if len(vals) > 1 {
-				err := fmt.Errorf("Header parameter had multiple values; which is unsupported.")
-				if (HeaderFlags | IGNORE_MULTIPLE_HEADERVALS) == 0 {
-					glog.Warningf("%v", err)
-				} else {
-					return err
-				}
-			}
-			err := SetField(obj, field, vals[0])
-			if err != nil {
-				return fmt.Errorf("Failed to set header binding %s: %v", field, err)
-			}
+		val := ctx.Request.Header.Get(headerKey)
+		if val == "" {
+			continue
+		}
+
+		err := SetField(obj, field, val)
+		if err != nil {
+			return fmt.Errorf("Failed to set header binding %s: %v", field, err)
 		}
 	}
 	return nil
