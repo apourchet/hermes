@@ -174,53 +174,53 @@ func TestMain(m *testing.M) {
 
 func TestCallSuccess(t *testing.T) {
 	out := &Outbound{false}
-	err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
+	_, err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
 	assert.Nil(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestCallWrongSecret(t *testing.T) {
 	out := &Outbound{true}
-	err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
+	_, err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
 	assert.True(t, out.Ok) // Error in the request, out was not filled in
 }
 
 func TestCallNotFound(t *testing.T) {
-	err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
+	_, err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
 
 func TestNoInput(t *testing.T) {
 	out := &Outbound{false}
-	err := si.Call(context.Background(), "NoInput", nil, out)
+	_, err := si.Call(context.Background(), "NoInput", nil, out)
 	assert.Nil(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestNoOutput(t *testing.T) {
-	err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
+	_, err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
 	assert.Nil(t, err)
 
-	err = si.Call(context.Background(), "NoOutput", &Inbound{"wrong secret"}, nil)
+	_, err = si.Call(context.Background(), "NoOutput", &Inbound{"wrong secret"}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestSliced(t *testing.T) {
-	err := si.Call(context.Background(), "Sliced", &Slice{"a", "b"}, nil)
+	_, err := si.Call(context.Background(), "Sliced", &Slice{"a", "b"}, nil)
 	assert.Nil(t, err)
 
-	err = si.Call(context.Background(), "Sliced", nil, nil)
+	_, err = si.Call(context.Background(), "Sliced", nil, nil)
 	assert.NotNil(t, err)
 }
 
 func TestPointers(t *testing.T) {
 	s := ""
 	i := 69
-	err := si.Call(context.Background(), "Pointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call(context.Background(), "Pointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	err = si.Call(context.Background(), "Pointers", &Pointers{&i, nil}, nil)
+	_, err = si.Call(context.Background(), "Pointers", &Pointers{&i, nil}, nil)
 	assert.Nil(t, err)
 }
 
@@ -243,14 +243,14 @@ func TestAllTypes(t *testing.T) {
 		}{{"slice", &f}},
 	}
 
-	err := si.Call(context.Background(), "AllTypes", input, nil)
+	_, err := si.Call(context.Background(), "AllTypes", input, nil)
 	assert.Nil(t, err)
 }
 
 func TestRawType(t *testing.T) {
 	in := 13
 	out := ""
-	err := si.Call(context.Background(), "RawType", &in, &out)
+	_, err := si.Call(context.Background(), "RawType", &in, &out)
 	assert.Nil(t, err)
 	assert.Equal(t, "13", out)
 }
@@ -258,7 +258,7 @@ func TestRawType(t *testing.T) {
 func TestRawMap(t *testing.T) {
 	in := map[string]string{"a": "b"}
 	out := map[string]int{}
-	err := si.Call(context.Background(), "RawMap", &in, &out)
+	_, err := si.Call(context.Background(), "RawMap", &in, &out)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(out))
 	assert.Equal(t, 13, out["ab"])
@@ -267,25 +267,25 @@ func TestRawMap(t *testing.T) {
 func TestQueryPointers(t *testing.T) {
 	s := ""
 	i := 69
-	err := si.Call(context.Background(), "QueryPointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call(context.Background(), "QueryPointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	err = si.Call(context.Background(), "QueryPointers", &Pointers{&i, nil}, nil)
+	_, err = si.Call(context.Background(), "QueryPointers", &Pointers{&i, nil}, nil)
 	assert.Nil(t, err)
 }
 
 func TestParamed(t *testing.T) {
-	err := si.Call(context.Background(), "Paramed", &Action{69}, nil)
+	_, err := si.Call(context.Background(), "Paramed", &Action{69}, nil)
 	assert.Nil(t, err)
 
-	err = si.Call(context.Background(), "Paramed", &Action{13}, nil)
+	_, err = si.Call(context.Background(), "Paramed", &Action{13}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestQueried(t *testing.T) {
-	err := si.Call(context.Background(), "Queried", &Action{69}, nil)
+	_, err := si.Call(context.Background(), "Queried", &Action{69}, nil)
 	assert.Nil(t, err)
 
-	err = si.Call(context.Background(), "Queried", &Action{13}, nil)
+	_, err = si.Call(context.Background(), "Queried", &Action{13}, nil)
 	assert.NotNil(t, err)
 }

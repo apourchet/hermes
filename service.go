@@ -34,65 +34,62 @@ func NewService(svc IServiceable) *Service {
 	return out
 }
 
-func (s *Service) Call(ctx context.Context, name string, in, out interface{}) error {
+func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (int, error) {
 	svc := s.serviceable
 	// Get endpoint
 	ep, err := findEndpointByHandler(svc, name)
 	if err != nil {
-		return fmt.Errorf("Client failed to find endpoint: %v", err)
+		return http.StatusBadRequest, fmt.Errorf("Client failed to find endpoint: %v", err)
 	}
 
 	// Resolve URL
 	url, err := s.Resolve(svc.SNI(), ep.Path)
 	if err != nil {
-		return fmt.Errorf("Client failed to resolve url: %v", err)
+		return http.StatusNotFound, fmt.Errorf("Client failed to resolve url: %v", err)
 	}
 
 	// Create new request
 	req, err := http.NewRequest(ep.Method, fmt.Sprintf("%s://%s", s.Scheme, url), nil)
 	if err != nil {
-		return fmt.Errorf("Client failed to create new http request")
+		return http.StatusBadRequest, fmt.Errorf("Client failed to create new http request")
 	}
 
 	// Use bindings on request
 	err = s.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(req, in)
 	if err != nil {
-		return fmt.Errorf("Client failed to apply a binding: %v", err)
+		return http.StatusInternalServerError, fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
 
 	// Execute request
 	resp, err := s.Client.Exec(ctx, req)
 	if err != nil {
-		return fmt.Errorf("Client failed execute request: %v", err)
+		return http.StatusInternalServerError, fmt.Errorf("Client failed execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// Read in response
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Client failed read response body: %v", err)
+		return resp.StatusCode, fmt.Errorf("Client failed read response body: %v", err)
 	}
 
 	// Deal with response
 	if resp.StatusCode/100 == 2 {
 		if out != nil {
 			if err := json.Unmarshal(body, out); err != nil {
-				return fmt.Errorf("Client failed to unmarshal response into output: %v", err)
+				return resp.StatusCode, fmt.Errorf("Client failed to unmarshal response into output: %v", err)
 			}
 		}
-		return nil
+		return resp.StatusCode, nil
 	}
 
 	// There was an error
-	tmp := map[string]string{}
-	err = json.Unmarshal(body, &tmp)
+	tmp := &Error{}
+	err = json.Unmarshal(body, tmp)
 	if err != nil {
-		return fmt.Errorf("Client failed to parse error response: %v", err)
+		return resp.StatusCode, fmt.Errorf("Client failed to parse error response: %v", err)
 	}
-	if message, found := tmp["message"]; found {
-		return fmt.Errorf(message)
-	}
-	return fmt.Errorf("Client failed to find error message. Status code was %d.", resp.StatusCode)
+	return resp.StatusCode, tmp
 }
 
 func (svc *Service) Serve(engine *gin.Engine) error {
