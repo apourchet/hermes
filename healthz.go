@@ -2,5 +2,6 @@ package hermes
 
 import "github.com/apourchet/hermes/endpoint"
 
-var HealthChecker = endpoint.HealthChecker{}
+type HealthChecker endpoint.HealthChecker
+
 var Healthz = endpoint.Healthz
