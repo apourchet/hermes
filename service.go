@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/apourchet/hermes/client"
+	"github.com/apourchet/hermes/requestid"
 	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
@@ -59,6 +60,9 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (i
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
+
+	// Transfer request ID to call
+	requestid.TransferRequestID(ctx, req)
 
 	// Execute request
 	resp, err := s.Client.Exec(ctx, req)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/apourchet/hermes/binding"
 	"github.com/apourchet/hermes/endpoint"
+	"github.com/apourchet/hermes/requestid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,6 +26,10 @@ func findEndpointByHandler(svc IServer, name string) (*endpoint.Endpoint, error)
 
 func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		// Make sure there exists a request id
+		requestid.EnsureRequestID(ctx)
+
+		// Prepare inputs and outputs
 		var input reflect.Value
 		if ep.InputType != nil {
 			input = reflect.New(ep.InputType)
@@ -39,7 +44,7 @@ func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, m
 		if input.IsValid() {
 			err := binder.Bind(ctx, input.Interface())
 			if err != nil {
-				ctx.JSON(http.StatusBadRequest, &gin.H{"message": err.Error()})
+				ctx.JSON(http.StatusBadRequest, &Error{err.Error()})
 				return
 			}
 		}
@@ -63,9 +68,12 @@ func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, m
 
 		if !vals[1].IsNil() { // If there was an error
 			errVal := vals[1].Interface().(error)
+			DefaultErrorHandler(ctx, errVal)
 			ctx.JSON(code, &Error{errVal.Error()})
 		} else if output.IsValid() {
 			ctx.JSON(code, output.Interface())
+		} else {
+			ctx.Writer.WriteHeader(code)
 		}
 	}
 }
