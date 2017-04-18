@@ -68,7 +68,7 @@ func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, m
 
 		if !vals[1].IsNil() { // If there was an error
 			errVal := vals[1].Interface().(error)
-			DefaultErrorHandler(ctx, errVal)
+			DefaultErrorHandler(ctx, ctx.Request.URL.Path, code, errVal)
 			ctx.JSON(code, &Error{errVal.Error()})
 		} else if output.IsValid() {
 			ctx.JSON(code, output.Interface())
