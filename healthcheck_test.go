@@ -24,11 +24,13 @@ func (_ Service) Endpoints() hermes.EndpointMap {
 
 func TestHealthzSuccess(t *testing.T) {
 	engine := gin.New()
-	si := hermes.NewService(Service{})
-	si.Client = &hermes.MockClient{engine}
+	si := hermes.NewServer(Service{})
 	si.Serve(engine)
 
-	code, err := si.Call(context.Background(), "Healthz", nil, nil)
+	caller := hermes.NewCaller(Service{})
+	caller.Client = &hermes.MockClient{engine}
+
+	code, err := caller.Call(context.Background(), "Healthz", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, code)
 }

@@ -6,54 +6,55 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
-type Service struct {
+type ICaller interface {
+	Call(ctx context.Context, methodname string, in, out interface{}) (int, error)
+}
+
+type Caller struct {
 	Client   IClient
 	Resolve  Resolver
 	Bindings BindingFactory
 
 	Scheme string
 
-	serviceable IServiceable
+	callable ICallable
 }
 
-func NewService(svc IServiceable) *Service {
-	out := &Service{}
+func NewCaller(callable ICallable) *Caller {
+	out := &Caller{}
 	out.Client = DefaultClient
 	out.Resolve = DefaultResolver
 	out.Bindings = DefaultBindingFactory
-
 	out.Scheme = "http"
-
-	out.serviceable = svc
+	out.callable = callable
 	return out
 }
 
-func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (int, error) {
-	svc := s.serviceable
+func (caller *Caller) Call(ctx context.Context, methodname string, in, out interface{}) (int, error) {
+	callable := caller.callable
+
 	// Get endpoint
-	ep, err := findEndpointByHandler(svc, name)
+	ep, err := findEndpointByHandler(callable, methodname)
 	if err != nil {
 		return http.StatusBadRequest, fmt.Errorf("Client failed to find endpoint: %v", err)
 	}
 
 	// Resolve URL
-	url, err := s.Resolve(svc.SNI(), ep.Path)
+	url, err := caller.Resolve(callable.SNI(), ep.Path)
 	if err != nil {
 		return http.StatusNotFound, fmt.Errorf("Client failed to resolve url: %v", err)
 	}
 
 	// Create new request
-	req, err := http.NewRequest(ep.Method, fmt.Sprintf("%s://%s", s.Scheme, url), nil)
+	req, err := http.NewRequest(ep.Method, fmt.Sprintf("%s://%s", caller.Scheme, url), nil)
 	if err != nil {
 		return http.StatusBadRequest, fmt.Errorf("Client failed to create new http request")
 	}
 
 	// Use bindings on request
-	err = s.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(req, in)
+	err = caller.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(req, in)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
@@ -62,7 +63,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (i
 	TransferRequestID(ctx, req)
 
 	// Execute request
-	resp, err := s.Client.Exec(ctx, req)
+	resp, err := caller.Client.Exec(ctx, req)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed execute request: %v", err)
 	}
@@ -91,8 +92,4 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (i
 		return resp.StatusCode, fmt.Errorf("Client failed to parse error response: %v", err)
 	}
 	return resp.StatusCode, tmp
-}
-
-func (svc *Service) Serve(engine *gin.Engine) error {
-	return NewServable(svc.serviceable, svc.Bindings).Serve(engine)
 }

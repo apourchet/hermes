@@ -159,14 +159,16 @@ func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[st
 }
 
 // Tests
-var engine *gin.Engine
-var si *hermes.Service
+var si hermes.ICaller
 
 func TestMain(m *testing.M) {
-	engine = gin.New()
-	hermes.DefaultClient = &hermes.MockClient{engine}
-	si = hermes.NewService(&MyService{})
-	si.Serve(engine)
+	engine := gin.New()
+	server := hermes.NewServer(&MyService{})
+	server.Serve(engine)
+
+	caller := hermes.NewCaller(&MyService{})
+	caller.Client = &hermes.MockClient{engine}
+	si = caller
 	os.Exit(m.Run())
 }
 

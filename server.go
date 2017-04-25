@@ -8,25 +8,26 @@ import (
 )
 
 // Struct wrappers
-type Servable struct {
-	Server   IServer
+type Server struct {
 	Bindings BindingFactory
+
+	handler IServer
 }
 
-func NewServable(server IServer, bindings BindingFactory) Servable {
-	return Servable{server, bindings}
+func NewServer(iserver IServer) *Server {
+	server := &Server{DefaultBindingFactory, iserver}
+	return server
 }
 
-func (servable Servable) Serve(engine *gin.Engine) error {
-	server := servable.Server
-	serviceType := reflect.TypeOf(server)
-	for _, ep := range server.Endpoints() {
-		method, ok := serviceType.MethodByName(ep.Handler)
+func (server *Server) Serve(engine *gin.Engine) error {
+	handlerType := reflect.TypeOf(server.handler)
+	for _, ep := range server.handler.Endpoints() {
+		method, ok := handlerType.MethodByName(ep.Handler)
 		if !ok {
-			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, serviceType)
+			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, handlerType)
 		}
-		binding := servable.Bindings(ep.Params, ep.Queries, ep.Headers)
-		fn := getGinHandler(server, binding, ep, method)
+		binding := server.Bindings(ep.Params, ep.Queries, ep.Headers)
+		fn := getGinHandler(server.handler, binding, ep, method)
 		engine.Handle(ep.Method, ep.Path, fn)
 	}
 	return nil
