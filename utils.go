@@ -13,7 +13,7 @@ const (
 	HERMES_CODE_BYPASS = -1
 )
 
-func findEndpointByHandler(svc IServer, name string) (*Endpoint, error) {
+func findEndpointByHandler(svc Server, name string) (*Endpoint, error) {
 	for _, ep := range svc.Endpoints() {
 		if ep.Handler == name {
 			return ep, nil
@@ -22,7 +22,7 @@ func findEndpointByHandler(svc IServer, name string) (*Endpoint, error) {
 	return nil, fmt.Errorf("MethodNotFoundError")
 }
 
-func getGinHandler(svc IServer, binder binding.Binding, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
+func getGinHandler(svc Server, binder binding.Binding, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Make sure there exists a request id
 		EnsureRequestID(ctx)

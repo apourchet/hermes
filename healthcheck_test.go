@@ -24,7 +24,7 @@ func (_ Service) Endpoints() hermes.EndpointMap {
 
 func TestHealthzSuccess(t *testing.T) {
 	engine := gin.New()
-	si := hermes.NewServer(Service{})
+	si := hermes.NewRouter(Service{})
 	si.Serve(engine)
 
 	caller := hermes.NewCaller(Service{})

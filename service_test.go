@@ -163,7 +163,7 @@ var si hermes.ICaller
 
 func TestMain(m *testing.M) {
 	engine := gin.New()
-	server := hermes.NewServer(&MyService{})
+	server := hermes.NewRouter(&MyService{})
 	server.Serve(engine)
 
 	caller := hermes.NewCaller(&MyService{})

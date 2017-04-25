@@ -8,26 +8,26 @@ import (
 )
 
 // Struct wrappers
-type Server struct {
+type Router struct {
 	Bindings BindingFactory
 
-	handler IServer
+	server Server
 }
 
-func NewServer(iserver IServer) *Server {
-	server := &Server{DefaultBindingFactory, iserver}
-	return server
+func NewRouter(server Server) *Router {
+	router := &Router{DefaultBindingFactory, server}
+	return router
 }
 
-func (server *Server) Serve(engine *gin.Engine) error {
-	handlerType := reflect.TypeOf(server.handler)
-	for _, ep := range server.handler.Endpoints() {
+func (router *Router) Serve(engine *gin.Engine) error {
+	handlerType := reflect.TypeOf(router.server)
+	for _, ep := range router.server.Endpoints() {
 		method, ok := handlerType.MethodByName(ep.Handler)
 		if !ok {
 			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, handlerType)
 		}
-		binding := server.Bindings(ep.Params, ep.Queries, ep.Headers)
-		fn := getGinHandler(server.handler, binding, ep, method)
+		binding := router.Bindings(ep.Params, ep.Queries, ep.Headers)
+		fn := getGinHandler(router.server, binding, ep, method)
 		engine.Handle(ep.Method, ep.Path, fn)
 	}
 	return nil
