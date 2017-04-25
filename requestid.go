@@ -1,4 +1,4 @@
-package requestid
+package hermes
 
 import (
 	"context"

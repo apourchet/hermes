@@ -6,8 +6,6 @@ import (
 	"reflect"
 
 	"github.com/apourchet/hermes/binding"
-	"github.com/apourchet/hermes/endpoint"
-	"github.com/apourchet/hermes/requestid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +13,7 @@ const (
 	HERMES_CODE_BYPASS = -1
 )
 
-func findEndpointByHandler(svc IServer, name string) (*endpoint.Endpoint, error) {
+func findEndpointByHandler(svc IServer, name string) (*Endpoint, error) {
 	for _, ep := range svc.Endpoints() {
 		if ep.Handler == name {
 			return ep, nil
@@ -24,10 +22,10 @@ func findEndpointByHandler(svc IServer, name string) (*endpoint.Endpoint, error)
 	return nil, fmt.Errorf("MethodNotFoundError")
 }
 
-func getGinHandler(svc IServer, binder binding.Binding, ep *endpoint.Endpoint, method reflect.Method) gin.HandlerFunc {
+func getGinHandler(svc IServer, binder binding.Binding, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Make sure there exists a request id
-		requestid.EnsureRequestID(ctx)
+		EnsureRequestID(ctx)
 
 		// Prepare inputs and outputs
 		var input reflect.Value

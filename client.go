@@ -1,4 +1,4 @@
-package client
+package hermes
 
 import (
 	"context"
@@ -30,6 +30,11 @@ func (c *Client) Exec(ctx context.Context, req *http.Request) (*http.Response, e
 
 type MockClient struct {
 	*gin.Engine
+}
+
+func NewMockClient() *MockClient {
+	engine := gin.New()
+	return &MockClient{engine}
 }
 
 func (c *MockClient) Exec(ctx context.Context, req *http.Request) (*http.Response, error) {

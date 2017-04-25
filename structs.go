@@ -1,7 +1,5 @@
 package hermes
 
-import "github.com/apourchet/hermes/endpoint"
-
 // Input types. These interfaces must be satisfied by the user
 type IServiceable interface {
 	IHosted
@@ -17,6 +15,6 @@ type IServer interface {
 }
 
 // Aliases
-type EndpointMap []*endpoint.Endpoint
+type EndpointMap []*Endpoint
 
-var EP = endpoint.NewEndpoint
+var EP = NewEndpoint

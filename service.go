@@ -7,15 +7,12 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/apourchet/hermes/client"
-	"github.com/apourchet/hermes/requestid"
-	"github.com/apourchet/hermes/resolver"
 	"github.com/gin-gonic/gin"
 )
 
 type Service struct {
-	Client   client.IClient
-	Resolve  resolver.Resolver
+	Client   IClient
+	Resolve  Resolver
 	Bindings BindingFactory
 
 	Scheme string
@@ -25,8 +22,8 @@ type Service struct {
 
 func NewService(svc IServiceable) *Service {
 	out := &Service{}
-	out.Client = client.DefaultClient
-	out.Resolve = resolver.DefaultResolver
+	out.Client = DefaultClient
+	out.Resolve = DefaultResolver
 	out.Bindings = DefaultBindingFactory
 
 	out.Scheme = "http"
@@ -62,7 +59,7 @@ func (s *Service) Call(ctx context.Context, name string, in, out interface{}) (i
 	}
 
 	// Transfer request ID to call
-	requestid.TransferRequestID(ctx, req)
+	TransferRequestID(ctx, req)
 
 	// Execute request
 	resp, err := s.Client.Exec(ctx, req)

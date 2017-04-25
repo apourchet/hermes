@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/apourchet/hermes"
-	"github.com/apourchet/hermes/client"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -153,7 +152,6 @@ func (s *MyService) RawType(c context.Context, in *int, out *string) (int, error
 
 func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[string]int) (int, error) {
 	*out = map[string]int{}
-	fmt.Println(in, out)
 	for k, v := range *in {
 		(*out)[k+v] = 13
 	}
@@ -166,7 +164,7 @@ var si *hermes.Service
 
 func TestMain(m *testing.M) {
 	engine = gin.New()
-	client.DefaultClient = &client.MockClient{engine}
+	hermes.DefaultClient = &hermes.MockClient{engine}
 	si = hermes.NewService(&MyService{})
 	si.Serve(engine)
 	os.Exit(m.Run())
