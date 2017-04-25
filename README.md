@@ -45,14 +45,14 @@ func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOut
 ### Server Creation
 ```go
 engine := gin.New()
-si := hermes.NewService(&MyService{})
-si.Serve(engine)
+server := hermes.NewServer(&MyService{})
+server.Serve(engine)
 engine.Run(":9000")
 ```
 
 ### Client RPC Call
 ```go
-si := hermes.NewService(&MyService{})
+caller := hermes.NewCaller(&MyService{})
 out := &Outbound{false}
-code, err := si.Call("RpcCall", &Inbound{"secret"}, out)
+code, err := caller.Call("RpcCall", &Inbound{"secret"}, out)
 ```
