@@ -9,7 +9,7 @@ import (
 )
 
 func GetRequestID(ctx context.Context) string {
-	rid := ctx.Value("Request-ID")
+	rid := ctx.Value("Hermes-Request-ID")
 	if rid == nil {
 		return ""
 	}
@@ -17,7 +17,7 @@ func GetRequestID(ctx context.Context) string {
 }
 
 func SetRequestID(ctx context.Context, rid string) context.Context {
-	return context.WithValue(ctx, "Request-ID", rid)
+	return context.WithValue(ctx, "Hermes-Request-ID", rid)
 }
 
 func EnsureRequestID(ctx *gin.Context) {
@@ -25,7 +25,7 @@ func EnsureRequestID(ctx *gin.Context) {
 	if rid == "" {
 		rid = uuid.NewV4().String()
 	}
-	ctx.Set("Request-ID", rid)
+	ctx.Set("Hermes-Request-ID", rid)
 }
 
 func TransferRequestID(ctx context.Context, req *http.Request) {
