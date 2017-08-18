@@ -1,6 +1,7 @@
 package binding
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +11,10 @@ var binding1 = &URLBinding{[]string{"param1", "param2"}, []string{"query1", "que
 
 func TestTransformURLParam(t *testing.T) {
 	input := struct{ Param1 string }{"myname"}
-	path, err := binding1.TransformURL("http://something.com/api/v1/test/:param1/something", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/test/:param1/something", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/test/myname/something", path)
+	assert.Equal(t, "http://example.com/api/v1/test/myname/something", req.URL.String())
 }
 
 func TestTransformURLParams(t *testing.T) {
@@ -20,10 +22,10 @@ func TestTransformURLParams(t *testing.T) {
 		Param1 string
 		Param2 int
 	}{"myname", 2}
-
-	path, err := binding1.TransformURL("http://something.com/api/v1/:param1/:param2", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/:param1/:param2", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/myname/2", path)
+	assert.Equal(t, "http://example.com/api/v1/myname/2", req.URL.String())
 }
 
 func TestTransformURLParamNil(t *testing.T) {
@@ -33,23 +35,25 @@ func TestTransformURLParamNil(t *testing.T) {
 	}{}
 	p1 := "myname"
 	input.Param1 = &p1
-
-	_, err := binding1.TransformURL("http://something.com/api/v1/:param1/:param2", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/:param1/:param2", nil)
+	err := binding1.Apply(req, input)
 	assert.NotNil(t, err)
 }
 
 func TestTransformURLQuery(t *testing.T) {
 	input := struct{ Query1 string }{"myname"}
-	path, err := binding1.TransformURL("http://something.com/api/v1/test", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/test", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/test?query1=myname", path)
+	assert.Equal(t, "http://example.com/api/v1/test?query1=myname", req.URL.String())
 }
 
 func TestTransformURLQueryNil(t *testing.T) {
 	input := struct{ Query1 *string }{}
-	path, err := binding1.TransformURL("http://something.com/api/v1/test", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/test", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/test", path)
+	assert.Equal(t, "http://example.com/api/v1/test", req.URL.String())
 }
 
 func TestTransformURLQueries(t *testing.T) {
@@ -57,9 +61,10 @@ func TestTransformURLQueries(t *testing.T) {
 		Query1 string
 		Query2 int
 	}{"myname", 2}
-	path, err := binding1.TransformURL("http://something.com/api/v1/test", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/test", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/test?query1=myname&query2=2", path)
+	assert.Equal(t, "http://example.com/api/v1/test?query1=myname&query2=2", req.URL.String())
 }
 
 func TestTransformURLMix(t *testing.T) {
@@ -67,115 +72,8 @@ func TestTransformURLMix(t *testing.T) {
 		Param1 string
 		Query2 int
 	}{"myname", 2}
-	path, err := binding1.TransformURL("http://something.com/api/v1/:param1", input)
+	req, _ := http.NewRequest("GET", "http://example.com/api/v1/:param1", nil)
+	err := binding1.Apply(req, input)
 	assert.Nil(t, err)
-	assert.Equal(t, "http://something.com/api/v1/myname?query2=2", path)
-}
-
-func TestSetFieldString(t *testing.T) {
-	obj := struct {
-		Field1 string
-	}{}
-	err := SetField(&obj, "field1", "test")
-	assert.Nil(t, err)
-	assert.Equal(t, "test", obj.Field1)
-}
-
-func TestSetFieldBool(t *testing.T) {
-	obj := struct {
-		Field1 bool
-	}{}
-	err := SetField(&obj, "field1", "true")
-	assert.Nil(t, err)
-	assert.Equal(t, true, obj.Field1)
-}
-
-func TestSetFieldPointer(t *testing.T) {
-	obj := struct {
-		A *bool
-	}{}
-	err := SetField(&obj, "a", "true")
-	assert.Nil(t, err)
-	assert.NotNil(t, obj.A)
-	assert.Equal(t, true, *obj.A)
-}
-
-func TestSetFieldInt(t *testing.T) {
-	obj := struct {
-		A int
-		B int8
-		C int32
-		D int64
-	}{}
-	err := SetField(&obj, "a", "-1")
-	assert.Nil(t, err)
-	assert.Equal(t, -1, obj.A)
-
-	err = SetField(&obj, "b", "100")
-	assert.Nil(t, err)
-	assert.Equal(t, int8(100), obj.B)
-
-	err = SetField(&obj, "c", "123123")
-	assert.Nil(t, err)
-	assert.Equal(t, int32(123123), obj.C)
-
-	err = SetField(&obj, "d", "99999999")
-	assert.Nil(t, err)
-	assert.Equal(t, int64(99999999), obj.D)
-}
-
-func TestSetFieldUInt(t *testing.T) {
-	obj := struct {
-		A uint
-		B uint8
-		C uint32
-		D uint64
-	}{}
-	err := SetField(&obj, "a", "3")
-	assert.Nil(t, err)
-	assert.Equal(t, uint(3), obj.A)
-
-	err = SetField(&obj, "b", "120")
-	assert.Nil(t, err)
-	assert.Equal(t, uint8(120), obj.B)
-
-	err = SetField(&obj, "c", "123123")
-	assert.Nil(t, err)
-	assert.Equal(t, uint32(123123), obj.C)
-
-	err = SetField(&obj, "d", "999999999")
-	assert.Nil(t, err)
-	assert.Equal(t, uint64(999999999), obj.D)
-}
-
-func TestSetFieldFloat(t *testing.T) {
-	obj := struct {
-		A float32
-		B float64
-	}{}
-	err := SetField(&obj, "a", "0.1")
-	assert.Nil(t, err)
-	assert.Equal(t, float32(0.1), obj.A)
-
-	err = SetField(&obj, "b", "255.2")
-	assert.Nil(t, err)
-	assert.Equal(t, float64(255.2), obj.B)
-}
-
-func TestSetFieldSlice(t *testing.T) {
-	obj := struct {
-		A []interface{}
-	}{}
-	err := SetField(&obj, "a", `["a","b"]`)
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(obj.A))
-}
-
-func TestSetFieldMap(t *testing.T) {
-	obj := struct {
-		A map[string]interface{}
-	}{}
-	err := SetField(&obj, "a", `{"a":1}`)
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(obj.A))
+	assert.Equal(t, "http://example.com/api/v1/myname?query2=2", req.URL.String())
 }

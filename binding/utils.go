@@ -74,7 +74,10 @@ func ApplyHeader(req *http.Request, headername string, fieldvalue string) error 
 }
 
 func ApplyQuery(req *http.Request, queryname string, fieldvalue string) error {
-	req.URL.RawQuery += fmt.Sprintf("%s=%s&", url.QueryEscape(queryname), url.QueryEscape(fieldvalue))
+	if req.URL.RawQuery != "" {
+		req.URL.RawQuery += "&"
+	}
+	req.URL.RawQuery += fmt.Sprintf("%s=%s", url.QueryEscape(queryname), url.QueryEscape(fieldvalue))
 	return nil
 }
 
