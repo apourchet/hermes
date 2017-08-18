@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
-	"github.com/fatih/structs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,15 +13,9 @@ type HeaderBinding struct {
 }
 
 func (b *HeaderBinding) Bind(ctx *gin.Context, obj interface{}) error {
-	for headerKey, field := range b.Headers {
-		val := ctx.Request.Header.Get(headerKey)
-		if val == "" {
-			continue
-		}
-
-		err := SetField(obj, field, val)
-		if err != nil {
-			return fmt.Errorf("Failed to set header binding %s: %v", field, err)
+	for headerkey, field := range b.Headers {
+		if err := BindHeader(ctx, obj, headerkey, field); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -34,27 +26,14 @@ func (b *HeaderBinding) Apply(req *http.Request, obj interface{}) error {
 		return nil
 	}
 
-	v := reflect.ValueOf(obj)
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		if v.IsNil() { // If the chain ends in a nil, skip this
-			return nil
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
+	v, valid := Deref(obj)
+	if !valid || v.Kind() != reflect.Struct {
 		return nil
 	}
 
-	rawFields := structs.Map(obj)
-	fields := map[string]string{}
-	for name, value := range rawFields {
-		skip, value, err := Stringify(value)
-		if err != nil {
-			return fmt.Errorf("Failed to construct path: %v", err)
-		} else if !skip {
-			fields[strings.ToLower(name)] = value
-		}
+	fields, err := FieldMap(obj)
+	if err != nil {
+		return fmt.Errorf("Failed to apply header binding: %v", err)
 	}
 
 	for headerKey, field := range b.Headers {

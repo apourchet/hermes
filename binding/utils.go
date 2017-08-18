@@ -3,20 +3,115 @@ package binding
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/fatih/structs"
+	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
-func Stringify(val interface{}) (bool, string, error) {
-	v := reflect.ValueOf(val)
+// Binds the header <headername> to the field <fieldname> of obj
+func BindHeader(ctx *gin.Context, obj interface{}, headername string, fieldname string) error {
+	headerval := ctx.Request.Header.Get(headername)
+	if headerval == "" {
+		return nil
+	}
+	if err := SetField(obj, fieldname, headerval); err != nil {
+		return fmt.Errorf("Failed to set header binding %s: %v", headername, err)
+	}
+	return nil
+}
 
-	// Path down the chain of pointers until a non-pointer kind
+func BindQuery(ctx *gin.Context, obj interface{}, queryparam string, fieldname string) error {
+	vals, found := ctx.Request.URL.Query()[queryparam]
+	if !found || len(vals) == 0 {
+		return nil
+	}
+
+	if len(vals) > 1 {
+		err := fmt.Errorf("Query parameter had multiple values; which is unsupported.")
+		if (QueryFlags | IGNORE_MULTIPLE_QUERYVALS) == 0 {
+			glog.Warningf("%v", err)
+		} else {
+			return err
+		}
+	}
+	queryval, err := url.QueryUnescape(vals[0])
+	if err != nil {
+		return fmt.Errorf("Failed to unescape query value %s: %v", vals[0], err)
+	}
+
+	if err := SetField(obj, fieldname, queryval); err != nil {
+		return fmt.Errorf("Failed to set url query binding %s: %v", queryparam, err)
+	}
+	return nil
+}
+
+func BindPath(ctx *gin.Context, obj interface{}, pathparam string, fieldname string) error {
+	pathval := ctx.Param(pathparam)
+	if pathval == "" {
+		return nil
+	}
+
+	pathval, err := url.QueryUnescape(pathval)
+	if err != nil {
+		return fmt.Errorf("Failed to unescape path value %s: %v", pathval, err)
+	}
+
+	if err := SetField(obj, fieldname, pathval); err != nil {
+		return fmt.Errorf("Failed to set url parameter binding %s: %v", pathparam, err)
+	}
+	return nil
+}
+
+func ApplyHeader(req *http.Request, headername string, fieldvalue string) error {
+	req.Header.Set(headername, fieldvalue)
+	return nil
+}
+
+func ApplyQuery(req *http.Request, queryname string, fieldvalue string) error {
+	req.URL.RawQuery += fmt.Sprintf("%s=%s&", url.QueryEscape(queryname), url.QueryEscape(fieldvalue))
+	return nil
+}
+
+func ApplyPath(req *http.Request, paramname string, fieldvalue string) error {
+	req.URL.Path = strings.Replace(req.URL.Path, ":"+paramname, url.QueryEscape(fieldvalue), -1)
+	return nil
+}
+
+func Deref(obj interface{}) (reflect.Value, bool) {
+	v := reflect.ValueOf(obj)
 	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		if v.IsNil() { // If the chain ends in a nil, skip this
-			return true, "", nil
+			return v, false
 		}
 		v = v.Elem()
+	}
+	return v, true
+}
+
+func FieldMap(obj interface{}) (map[string]string, error) {
+	rawFields := structs.Map(obj)
+	fields := map[string]string{}
+	for name, value := range rawFields {
+		skip, value, err := Stringify(value)
+		if err != nil {
+			return fields, fmt.Errorf("Failed to construct path: %v", err)
+		} else if !skip {
+			fields[strings.ToLower(name)] = value
+		}
+	}
+	return fields, nil
+}
+
+func Stringify(val interface{}) (bool, string, error) {
+	v, valid := Deref(val)
+	if !valid {
+		return true, "", nil
 	}
 
 	switch v.Kind() {
@@ -43,16 +138,8 @@ func Stringify(val interface{}) (bool, string, error) {
 // Sets the field of the object using a string that
 // was retrieved from the URI of the request
 func SetField(obj interface{}, fieldname, value string) error {
-	v := reflect.ValueOf(obj)
-
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		if v.IsNil() {
-			return nil
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
+	v, valid := Deref(obj)
+	if !valid || v.Kind() != reflect.Struct {
 		return nil
 	}
 
