@@ -29,9 +29,13 @@ var StructTagApps = map[string]ValueApplier{
 // Given a struct definition:
 // type Request struct {
 //		Token string `hermes:"header=Authorization"`
+//		Limit int `hermes:"query=limit"`
+//		Resource string `hermes:"param=resource"`
 // }
 // The Authorization header will be parsed into the field Token of the
 // request struct
+// The Limit field will come from the query string
+// The Resource field will come from the resource value of the path
 func (b StructTagBinding) Bind(ctx *gin.Context, obj interface{}) error {
 	st := reflect.TypeOf(obj)
 	for i := 0; i < st.NumField(); i++ {
@@ -65,7 +69,6 @@ func (b StructTagBinding) Apply(req *http.Request, obj interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Failed to apply header binding: %v", err)
 	}
-
 	st := reflect.TypeOf(obj)
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Field(i)
