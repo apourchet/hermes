@@ -97,6 +97,15 @@ func Deref(obj interface{}) (reflect.Value, bool) {
 	return v, true
 }
 
+func DerefStruct(obj interface{}) (reflect.Type, bool) {
+	st := reflect.TypeOf(obj)
+	for st.Kind() == reflect.Ptr || st.Kind() == reflect.Interface {
+		st = st.Elem()
+	}
+
+	return st, st.Kind() == reflect.Struct
+}
+
 func FieldMap(obj interface{}) (map[string]string, error) {
 	rawFields := structs.Map(obj)
 	fields := map[string]string{}

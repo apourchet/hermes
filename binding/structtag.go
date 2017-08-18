@@ -37,7 +37,11 @@ var StructTagApps = map[string]ValueApplier{
 // The Limit field will come from the query string
 // The Resource field will come from the resource value of the path
 func (b StructTagBinding) Bind(ctx *gin.Context, obj interface{}) error {
-	st := reflect.TypeOf(obj)
+	st, valid := DerefStruct(obj)
+	if !valid {
+		return nil
+	}
+
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Field(i)
 		if alias, ok := field.Tag.Lookup("hermes"); ok && alias != "" {
@@ -69,7 +73,12 @@ func (b StructTagBinding) Apply(req *http.Request, obj interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Failed to apply header binding: %v", err)
 	}
-	st := reflect.TypeOf(obj)
+
+	st, valid := DerefStruct(obj)
+	if !valid {
+		return nil
+	}
+
 	for i := 0; i < st.NumField(); i++ {
 		field := st.Field(i)
 		lowername := strings.ToLower(field.Name)
