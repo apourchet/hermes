@@ -6,7 +6,7 @@ import (
 	"reflect"
 
 	"github.com/apourchet/hermes/binding"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 const (
@@ -22,8 +22,8 @@ func findEndpointByHandler(svc Server, name string) (*Endpoint, error) {
 	return nil, fmt.Errorf("MethodNotFoundError")
 }
 
-func getGinHandler(svc Server, binder binding.Binding, ep *Endpoint, method reflect.Method) gin.HandlerFunc {
-	return func(ctx *gin.Context) {
+func getEchoHandler(svc Server, binder binding.Binding, ep *Endpoint, method reflect.Method) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
 		// Make sure there exists a request id
 		EnsureRequestID(ctx)
 
@@ -43,7 +43,7 @@ func getGinHandler(svc Server, binder binding.Binding, ep *Endpoint, method refl
 			err := binder.Bind(ctx, input.Interface())
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, &Error{err.Error()})
-				return
+				return nil
 			}
 		}
 
@@ -61,17 +61,18 @@ func getGinHandler(svc Server, binder binding.Binding, ep *Endpoint, method refl
 		code := int(vals[0].Int())
 		if code == HERMES_CODE_BYPASS {
 			// Bypass code, do nothing here
-			return
+			return nil
 		}
 
 		if !vals[1].IsNil() { // If there was an error
 			errVal := vals[1].Interface().(error)
-			DefaultErrorHandler(ctx, ctx.Request.URL.Path, code, errVal)
+			DefaultErrorHandler(ctx, ctx.Request().URL.Path, code, errVal)
 			ctx.JSON(code, &Error{errVal.Error()})
 		} else if output.IsValid() {
 			ctx.JSON(code, output.Interface())
 		} else {
-			ctx.Writer.WriteHeader(code)
+			ctx.Response().WriteHeader(code)
 		}
+		return nil
 	}
 }

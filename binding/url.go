@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
-	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
+	"github.com/labstack/echo"
 )
 
 type URLBinding struct {
@@ -23,7 +23,7 @@ const (
 
 var QueryFlags = 0 | IGNORE_MULTIPLE_QUERYVALS
 
-func (b *URLBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (b *URLBinding) Bind(ctx echo.Context, obj interface{}) error {
 	for _, param := range b.Params {
 		val := ctx.Param(param)
 		err := SetField(obj, param, val)
@@ -33,7 +33,7 @@ func (b *URLBinding) Bind(ctx *gin.Context, obj interface{}) error {
 	}
 
 	for _, query := range b.Queries {
-		vals, found := ctx.Request.URL.Query()[query]
+		vals, found := ctx.Request().URL.Query()[query]
 		if found && len(vals) > 0 {
 			if len(vals) > 1 {
 				err := fmt.Errorf("Query parameter had multiple values; which is unsupported.")

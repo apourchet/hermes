@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -20,8 +20,8 @@ func SetRequestID(ctx context.Context, rid string) context.Context {
 	return context.WithValue(ctx, "Hermes-Request-ID", rid)
 }
 
-func EnsureRequestID(ctx *gin.Context) {
-	rid := ctx.Request.Header.Get("Hermes-Request-ID")
+func EnsureRequestID(ctx echo.Context) {
+	rid := ctx.Request().Header.Get("Hermes-Request-ID")
 	if rid == "" {
 		rid = uuid.NewV4().String()
 	}

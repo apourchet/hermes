@@ -3,10 +3,10 @@ package binding
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 type Binding interface {
-	Bind(ctx *gin.Context, obj interface{}) error
+	Bind(ctx echo.Context, obj interface{}) error
 	Apply(req *http.Request, obj interface{}) error
 }

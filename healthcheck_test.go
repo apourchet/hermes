@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/apourchet/hermes"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,7 +23,7 @@ func (_ Service) Endpoints() hermes.EndpointMap {
 }
 
 func TestHealthzSuccess(t *testing.T) {
-	engine := gin.New()
+	engine := echo.New()
 	si := hermes.NewRouter(Service{})
 	si.Serve(engine)
 

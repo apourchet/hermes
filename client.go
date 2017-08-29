@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 
 	"golang.org/x/net/context/ctxhttp"
 )
@@ -29,11 +29,11 @@ func (c *Client) Exec(ctx context.Context, req *http.Request) (*http.Response, e
 }
 
 type MockClient struct {
-	*gin.Engine
+	*echo.Echo
 }
 
 func NewMockClient() *MockClient {
-	engine := gin.New()
+	engine := echo.New()
 	return &MockClient{engine}
 }
 

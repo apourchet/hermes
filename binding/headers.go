@@ -7,16 +7,16 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 type HeaderBinding struct {
 	Headers map[string]string
 }
 
-func (b *HeaderBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (b *HeaderBinding) Bind(ctx echo.Context, obj interface{}) error {
 	for headerKey, field := range b.Headers {
-		val := ctx.Request.Header.Get(headerKey)
+		val := ctx.Request().Header.Get(headerKey)
 		if val == "" {
 			continue
 		}

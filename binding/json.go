@@ -6,15 +6,14 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/labstack/echo"
 )
 
 type JSONBinding struct{}
 
-func (_ *JSONBinding) Bind(ctx *gin.Context, obj interface{}) error {
-	if ctx.Request != nil && ctx.Request.ContentLength > 0 {
-		return binding.JSON.Bind(ctx.Request, obj)
+func (_ *JSONBinding) Bind(ctx echo.Context, obj interface{}) error {
+	if ctx.Request() != nil && ctx.Request().ContentLength > 0 {
+		return json.NewDecoder(ctx.Request().Body).Decode(obj)
 	}
 	return nil
 }

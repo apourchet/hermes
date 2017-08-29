@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 // Struct wrappers
@@ -19,7 +19,7 @@ func NewRouter(server Server) *Router {
 	return router
 }
 
-func (router *Router) Serve(engine *gin.Engine) error {
+func (router *Router) Serve(engine *echo.Echo) error {
 	handlerType := reflect.TypeOf(router.server)
 	for _, ep := range router.server.Endpoints() {
 		method, ok := handlerType.MethodByName(ep.Handler)
@@ -28,7 +28,7 @@ func (router *Router) Serve(engine *gin.Engine) error {
 		}
 		binding := router.Bindings(ep.Params, ep.Queries, ep.Headers)
 		fn := getGinHandler(router.server, binding, ep, method)
-		engine.Handle(ep.Method, ep.Path, fn)
+		engine.Add(ep.Method, ep.Path, fn)
 	}
 	return nil
 }
