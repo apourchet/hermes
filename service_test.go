@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
@@ -36,6 +37,8 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 		hermes.EP("QueryPointers", "GET", "/parampointers", Pointers{}, nil).Query("i", "s"),
 		hermes.EP("Paramed", "GET", "/paramed/:action", Action{}, nil).Param("action"),
 		hermes.EP("Queried", "GET", "/queried", Action{}, nil).Query("action"),
+
+		hermes.EP("TaggedParams", "GET", "/tagged/:p1", TaggedParams{}, nil),
 	}
 }
 
@@ -62,6 +65,11 @@ type AllTypes struct {
 		E string
 		F *float64
 	}
+}
+type TaggedParams struct {
+	Path   string  `hermes:"path=p1"`
+	Query  int     `hermes:"query=q1"`
+	Header *string `hermes:"header=h1"`
 }
 
 func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int, error) {
@@ -158,11 +166,25 @@ func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[st
 	return http.StatusOK, nil
 }
 
+func (s *MyService) TaggedParams(c context.Context, in *TaggedParams) (int, error) {
+	if in.Path != "mypath" {
+		return http.StatusBadRequest, nil
+	}
+	if in.Query != 42 {
+		return http.StatusBadRequest, nil
+	}
+	if in.Header == nil || *(in.Header) != "myheader" {
+		return http.StatusBadRequest, nil
+	}
+	return http.StatusOK, nil
+}
+
 // Tests
 var si hermes.ICaller
+var engine *gin.Engine
 
 func TestMain(m *testing.M) {
-	engine := gin.New()
+	engine = gin.New()
 	server := hermes.NewRouter(&MyService{})
 	server.Serve(engine)
 
@@ -288,4 +310,15 @@ func TestQueried(t *testing.T) {
 
 	_, err = si.Call(context.Background(), "Queried", &Action{13}, nil)
 	assert.NotNil(t, err)
+}
+
+func TestTaggedParam(t *testing.T) {
+	req, err := http.NewRequest("GET", "http://example.org/tagged/mypath?q1=42", nil)
+	assert.Nil(t, err)
+	req.Header.Add("h1", "myheader")
+
+	w := httptest.NewRecorder()
+	engine.ServeHTTP(w, req)
+	resp := w.Result()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }

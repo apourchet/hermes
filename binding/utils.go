@@ -155,8 +155,7 @@ func SetField(obj interface{}, fieldname, value string) error {
 		return nil
 	}
 
-	field := v.FieldByNameFunc(func(a string) bool { return strings.ToLower(a) == fieldname })
-
+	field := v.FieldByNameFunc(func(a string) bool { return strings.ToLower(a) == strings.ToLower(fieldname) })
 	if !field.IsValid() {
 		return fmt.Errorf("Field not found when binding: %s", fieldname)
 	}
