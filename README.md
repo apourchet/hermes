@@ -37,8 +37,8 @@ type OtherInbound struct { MyField int }
 type OtherOutbound struct { SomeFloat float64 }
 
 func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOutbound) (int, error) {
-    out.SomeFloat = 3.14 * in.MyField
-    return http.StatusOK, nil
+	out.SomeFloat = 3.14 * in.MyField
+  	return http.StatusOK, nil
 }
 ```
 
