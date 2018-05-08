@@ -18,12 +18,14 @@ var StructTagBinds = map[string]ValueBinder{
 	"header": BindHeader,
 	"query":  BindQuery,
 	"path":   BindPath,
+	"cookie": BindCookie,
 }
 
 var StructTagApps = map[string]ValueApplier{
 	"header": ApplyHeader,
 	"query":  ApplyQuery,
 	"path":   ApplyPath,
+	"cookie": ApplyCookie,
 }
 
 // Given a struct definition:

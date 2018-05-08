@@ -68,6 +68,24 @@ func BindPath(ctx *gin.Context, obj interface{}, pathparam string, fieldname str
 	return nil
 }
 
+func BindCookie(ctx *gin.Context, obj interface{}, cookiename string, fieldname string) error {
+	val, err := ctx.Cookie(cookiename)
+	if err == http.ErrNoCookie {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("Failed to get cookie information from request: %v", err)
+	}
+
+	if unescaped, err := url.PathUnescape(val); err == nil {
+		val = unescaped
+	}
+
+	if err := SetField(obj, fieldname, val); err != nil {
+		return fmt.Errorf("Failed to set url parameter binding %s: %v", cookiename, err)
+	}
+	return nil
+}
+
 func ApplyHeader(req *http.Request, headername string, fieldvalue string) error {
 	req.Header.Set(headername, fieldvalue)
 	return nil
@@ -83,6 +101,16 @@ func ApplyQuery(req *http.Request, queryname string, fieldvalue string) error {
 
 func ApplyPath(req *http.Request, paramname string, fieldvalue string) error {
 	req.URL.Path = strings.Replace(req.URL.Path, ":"+paramname, url.QueryEscape(fieldvalue), -1)
+	return nil
+}
+
+func ApplyCookie(req *http.Request, cookiename string, fieldvalue string) error {
+	value := url.PathEscape(fieldvalue)
+	cookie := &http.Cookie{
+		Name:  cookiename,
+		Value: value,
+	}
+	req.AddCookie(cookie)
 	return nil
 }
 
