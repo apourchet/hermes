@@ -26,5 +26,6 @@ func AllBindingFactory(params, queries []string, headers map[string]string) bind
 	header := &binding.HeaderBinding{headers}
 	url := &binding.URLBinding{params, queries}
 	json := &binding.JSONBinding{}
-	return binding.NewSequentialBinding(tags, header, url, json)
+	plugin := binding.PluginBinding{}
+	return binding.NewSequentialBinding(tags, header, url, json, plugin)
 }
