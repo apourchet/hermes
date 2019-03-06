@@ -1,7 +1,6 @@
 package hermes_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -10,13 +9,10 @@ import (
 	"testing"
 
 	"github.com/apourchet/hermes"
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	gin.SetMode(gin.ReleaseMode) // suppress logs
-}
 
 // Service definition
 type MyService struct{}
@@ -35,10 +31,10 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 		hermes.EP("RawMap", "GET", "/rawmap", map[string]string{}, map[string]int{}),
 
 		hermes.EP("QueryPointers", "GET", "/parampointers", Pointers{}, nil).Query("i", "s"),
-		hermes.EP("Paramed", "GET", "/paramed/:action", Action{}, nil).Param("action"),
+		hermes.EP("Paramed", "GET", "/paramed/{action}", Action{}, nil).Param("action"),
 		hermes.EP("Queried", "GET", "/queried", Action{}, nil).Query("action"),
 
-		hermes.EP("TaggedParams", "GET", "/tagged/:p1", TaggedParams{}, nil),
+		hermes.EP("TaggedParams", "GET", "/tagged/{p1}", TaggedParams{}, nil),
 	}
 }
 
@@ -72,7 +68,7 @@ type TaggedParams struct {
 	Header *string `hermes:"header=h1"`
 }
 
-func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int, error) {
+func (s *MyService) RpcCall(c *http.Request, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {
 		out.Ok = true
 		return http.StatusOK, nil
@@ -81,54 +77,54 @@ func (s *MyService) RpcCall(c context.Context, in *Inbound, out *Outbound) (int,
 	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
 }
 
-func (s *MyService) NoInput(c context.Context, out *Outbound) (int, error) {
+func (s *MyService) NoInput(c *http.Request, out *Outbound) (int, error) {
 	out.Ok = true
 	return http.StatusOK, nil
 }
 
-func (s *MyService) NoOutput(c context.Context, in *Inbound) (int, error) {
+func (s *MyService) NoOutput(c *http.Request, in *Inbound) (int, error) {
 	if in.Message == "secret" {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Secret was wrong: '%s'", in.Message)
 }
 
-func (s *MyService) Paramed(c context.Context, in *Action) (int, error) {
+func (s *MyService) Paramed(c *http.Request, in *Action) (int, error) {
 	if in.Action == 69 {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Action should be %d", 69)
 }
 
-func (s *MyService) Queried(c context.Context, in *Action) (int, error) {
+func (s *MyService) Queried(c *http.Request, in *Action) (int, error) {
 	if in.Action == 69 {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Action should be %d", 69)
 }
 
-func (s *MyService) Sliced(c context.Context, in *Slice) (int, error) {
+func (s *MyService) Sliced(c *http.Request, in *Slice) (int, error) {
 	if len(*in) == 2 {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Slice should have length 2")
 }
 
-func (s *MyService) Pointers(c context.Context, in *Pointers) (int, error) {
+func (s *MyService) Pointers(c *http.Request, in *Pointers) (int, error) {
 	if in.I != nil && *in.I == 69 && in.S == nil {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Should be 69 and nil; have %v and %v", in.I, in.S)
 }
 
-func (s *MyService) QueryPointers(c context.Context, in *Pointers) (int, error) {
+func (s *MyService) QueryPointers(c *http.Request, in *Pointers) (int, error) {
 	if in.I != nil && *in.I == 69 && in.S == nil {
 		return http.StatusOK, nil
 	}
 	return http.StatusBadRequest, fmt.Errorf("Should be 69 and nil; have %v and %v", in.I, in.S)
 }
 
-func (s *MyService) AllTypes(c context.Context, in *AllTypes) (int, error) {
+func (s *MyService) AllTypes(c *http.Request, in *AllTypes) (int, error) {
 	p := 1
 	f := float64(3.14)
 	wanted := &AllTypes{
@@ -152,13 +148,13 @@ func (s *MyService) AllTypes(c context.Context, in *AllTypes) (int, error) {
 	return http.StatusBadRequest, fmt.Errorf("Wanted %v, got %v", wanted, in)
 }
 
-func (s *MyService) RawType(c context.Context, in *int, out *string) (int, error) {
+func (s *MyService) RawType(c *http.Request, in *int, out *string) (int, error) {
 	str := fmt.Sprintf("%d", *in)
 	*out = str
 	return http.StatusOK, nil
 }
 
-func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[string]int) (int, error) {
+func (s *MyService) RawMap(c *http.Request, in *map[string]string, out *map[string]int) (int, error) {
 	*out = map[string]int{}
 	for k, v := range *in {
 		(*out)[k+v] = 13
@@ -166,7 +162,7 @@ func (s *MyService) RawMap(c context.Context, in *map[string]string, out *map[st
 	return http.StatusOK, nil
 }
 
-func (s *MyService) TaggedParams(c context.Context, in *TaggedParams) (int, error) {
+func (s *MyService) TaggedParams(c *http.Request, in *TaggedParams) (int, error) {
 	if in.Path != "mypath" {
 		return http.StatusBadRequest, nil
 	}
@@ -180,11 +176,11 @@ func (s *MyService) TaggedParams(c context.Context, in *TaggedParams) (int, erro
 }
 
 // Tests
-var si hermes.ICaller
-var engine *gin.Engine
+var si *hermes.Caller
+var engine *http.ServeMux
 
 func TestMain(m *testing.M) {
-	engine = gin.New()
+	engine = http.NewServeMux()
 	server := hermes.NewRouter(&MyService{})
 	server.Serve(engine)
 
@@ -196,54 +192,54 @@ func TestMain(m *testing.M) {
 
 func TestCallSuccess(t *testing.T) {
 	out := &Outbound{false}
-	_, err := si.Call(context.Background(), "RpcCall", &Inbound{"secret"}, out)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "RpcCall", &Inbound{"secret"}, out)
+	require.NoError(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestCallWrongSecret(t *testing.T) {
 	out := &Outbound{true}
-	_, err := si.Call(context.Background(), "RpcCall", &Inbound{"wrong secret"}, out)
+	_, err := si.Call(nil, "RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
 	assert.True(t, out.Ok) // Error in the request, out was not filled in
 }
 
 func TestCallNotFound(t *testing.T) {
-	_, err := si.Call(context.Background(), "NotAnEndpoint", &Inbound{}, &Outbound{})
+	_, err := si.Call(nil, "NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
 
 func TestNoInput(t *testing.T) {
 	out := &Outbound{false}
-	_, err := si.Call(context.Background(), "NoInput", nil, out)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "NoInput", nil, out)
+	require.NoError(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestNoOutput(t *testing.T) {
-	_, err := si.Call(context.Background(), "NoOutput", &Inbound{"secret"}, nil)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "NoOutput", &Inbound{"secret"}, nil)
+	require.NoError(t, err)
 
-	_, err = si.Call(context.Background(), "NoOutput", &Inbound{"wrong secret"}, nil)
+	_, err = si.Call(nil, "NoOutput", &Inbound{"wrong secret"}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestSliced(t *testing.T) {
-	_, err := si.Call(context.Background(), "Sliced", &Slice{"a", "b"}, nil)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "Sliced", &Slice{"a", "b"}, nil)
+	require.NoError(t, err)
 
-	_, err = si.Call(context.Background(), "Sliced", nil, nil)
+	_, err = si.Call(nil, "Sliced", nil, nil)
 	assert.NotNil(t, err)
 }
 
 func TestPointers(t *testing.T) {
 	s := ""
 	i := 69
-	_, err := si.Call(context.Background(), "Pointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call(nil, "Pointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	_, err = si.Call(context.Background(), "Pointers", &Pointers{&i, nil}, nil)
-	assert.Nil(t, err)
+	_, err = si.Call(nil, "Pointers", &Pointers{&i, nil}, nil)
+	require.NoError(t, err)
 }
 
 func TestAllTypes(t *testing.T) {
@@ -265,23 +261,23 @@ func TestAllTypes(t *testing.T) {
 		}{{"slice", &f}},
 	}
 
-	_, err := si.Call(context.Background(), "AllTypes", input, nil)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "AllTypes", input, nil)
+	require.NoError(t, err)
 }
 
 func TestRawType(t *testing.T) {
 	in := 13
 	out := ""
-	_, err := si.Call(context.Background(), "RawType", &in, &out)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "RawType", &in, &out)
+	require.NoError(t, err)
 	assert.Equal(t, "13", out)
 }
 
 func TestRawMap(t *testing.T) {
 	in := map[string]string{"a": "b"}
 	out := map[string]int{}
-	_, err := si.Call(context.Background(), "RawMap", &in, &out)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "RawMap", &in, &out)
+	require.NoError(t, err)
 	assert.Equal(t, 1, len(out))
 	assert.Equal(t, 13, out["ab"])
 }
@@ -289,33 +285,36 @@ func TestRawMap(t *testing.T) {
 func TestQueryPointers(t *testing.T) {
 	s := ""
 	i := 69
-	_, err := si.Call(context.Background(), "QueryPointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call(nil, "QueryPointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	_, err = si.Call(context.Background(), "QueryPointers", &Pointers{&i, nil}, nil)
-	assert.Nil(t, err)
+	_, err = si.Call(nil, "QueryPointers", &Pointers{&i, nil}, nil)
+	require.NoError(t, err)
 }
 
 func TestParamed(t *testing.T) {
-	_, err := si.Call(context.Background(), "Paramed", &Action{69}, nil)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "Paramed", &Action{69}, nil)
+	require.NoError(t, err)
 
-	_, err = si.Call(context.Background(), "Paramed", &Action{13}, nil)
+	_, err = si.Call(nil, "Paramed", &Action{13}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestQueried(t *testing.T) {
-	_, err := si.Call(context.Background(), "Queried", &Action{69}, nil)
-	assert.Nil(t, err)
+	_, err := si.Call(nil, "Queried", &Action{69}, nil)
+	require.NoError(t, err)
 
-	_, err = si.Call(context.Background(), "Queried", &Action{13}, nil)
+	_, err = si.Call(nil, "Queried", &Action{13}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestTaggedParam(t *testing.T) {
 	req, err := http.NewRequest("GET", "http://example.org/tagged/mypath?q1=42", nil)
-	assert.Nil(t, err)
+	require.NoError(t, err)
 	req.Header.Add("h1", "myheader")
+	req = mux.SetURLVars(req, map[string]string{
+		"p1": "mypath",
+	})
 
 	w := httptest.NewRecorder()
 	engine.ServeHTTP(w, req)

@@ -2,33 +2,34 @@ package hermes
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 )
 
-// Struct wrappers
-type Router struct {
-	Bindings BindingFactory
-
-	server Server
-}
-
 func NewRouter(server Server) *Router {
-	router := &Router{DefaultBindingFactory, server}
+	router := &Router{
+		Bindings: DefaultBindingFactory,
+		server:   server,
+	}
 	return router
 }
 
-func (router *Router) Serve(engine *gin.Engine) error {
+func (router *Router) Serve(httpmux *http.ServeMux) error {
+	mux := mux.NewRouter()
 	handlerType := reflect.TypeOf(router.server)
+
 	for _, ep := range router.server.Endpoints() {
 		method, ok := handlerType.MethodByName(ep.Handler)
 		if !ok {
 			return fmt.Errorf("Endpoint '%s' does not match any method of the type %v", ep.Handler, handlerType)
 		}
 		binding := router.Bindings(ep.Params, ep.Queries, ep.Headers)
-		fn := getGinHandler(router.server, binding, ep, method)
-		engine.Handle(ep.Method, ep.Path, fn)
+		handler := ep.Create(router.server, binding, method)
+		mux.HandleFunc(ep.Path, handler).Methods(ep.Method)
 	}
+
+	httpmux.Handle("/", mux)
 	return nil
 }

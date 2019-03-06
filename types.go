@@ -14,3 +14,10 @@ type Server interface {
 type EndpointMap []*Endpoint
 
 var EP = NewEndpoint
+
+// Struct wrappers
+type Router struct {
+	Bindings BindingFactory
+
+	server Server
+}

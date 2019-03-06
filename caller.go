@@ -1,16 +1,11 @@
 package hermes
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 )
-
-type ICaller interface {
-	Call(ctx context.Context, methodname string, in, out interface{}) (int, error)
-}
 
 type Caller struct {
 	Client   IClient
@@ -32,8 +27,11 @@ func NewCaller(callable ICallable) *Caller {
 	return out
 }
 
-func (caller *Caller) Call(ctx context.Context, methodname string, in, out interface{}) (int, error) {
+func (caller *Caller) Call(ctx *http.Request, methodname string, in, out interface{}) (int, error) {
 	callable := caller.callable
+	if ctx == nil {
+		ctx = &http.Request{}
+	}
 
 	// Get endpoint
 	ep, err := findEndpointByHandler(callable, methodname)
@@ -54,7 +52,7 @@ func (caller *Caller) Call(ctx context.Context, methodname string, in, out inter
 	}
 
 	// Use bindings on request
-	err = caller.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(req, in)
+	err = caller.Bindings(ep.Params, ep.Queries, ep.Headers).Apply(in, req)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed to apply a binding: %v", err)
 	}
@@ -63,7 +61,7 @@ func (caller *Caller) Call(ctx context.Context, methodname string, in, out inter
 	TransferRequestID(ctx, req)
 
 	// Execute request
-	resp, err := caller.Client.Exec(ctx, req)
+	resp, err := caller.Client.Exec(ctx.Context(), req)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed execute request: %v", err)
 	}

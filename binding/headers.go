@@ -4,24 +4,22 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-
-	"github.com/gin-gonic/gin"
 )
 
 type HeaderBinding struct {
 	Headers map[string]string
 }
 
-func (b *HeaderBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (b *HeaderBinding) Bind(req *http.Request, obj interface{}) error {
 	for headerkey, field := range b.Headers {
-		if err := BindHeader(ctx, obj, headerkey, field); err != nil {
+		if err := BindHeader(req, obj, headerkey, field); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (b *HeaderBinding) Apply(req *http.Request, obj interface{}) error {
+func (b *HeaderBinding) Apply(obj interface{}, req *http.Request) error {
 	if req == nil || obj == nil {
 		return nil
 	}

@@ -1,34 +1,31 @@
 package hermes
 
 import (
-	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	uuid "github.com/satori/go.uuid"
 )
 
-func GetRequestID(ctx context.Context) string {
-	rid := ctx.Value("Hermes-Request-ID")
-	if rid == nil {
-		return ""
-	}
-	return rid.(string)
+const HermesRIDHeader = "Hermes-Request-ID"
+
+func GetRequestID(req *http.Request) string {
+	return req.Header.Get(HermesRIDHeader)
 }
 
-func SetRequestID(ctx context.Context, rid string) context.Context {
-	return context.WithValue(ctx, "Hermes-Request-ID", rid)
+func SetRequestID(req *http.Request, rid string) *http.Request {
+	req.Header.Set(HermesRIDHeader, rid)
+	return req
 }
 
-func EnsureRequestID(ctx *gin.Context) {
-	rid := ctx.Request.Header.Get("Hermes-Request-ID")
+func EnsureRequestID(req *http.Request) {
+	rid := req.Header.Get(HermesRIDHeader)
 	if rid == "" {
 		rid = uuid.NewV4().String()
 	}
-	ctx.Set("Hermes-Request-ID", rid)
+	req.Header.Set(HermesRIDHeader, rid)
 }
 
-func TransferRequestID(ctx context.Context, req *http.Request) {
-	rid := GetRequestID(ctx)
-	req.Header.Set("Hermes-Request-ID", rid)
+func TransferRequestID(src *http.Request, dst *http.Request) {
+	rid := GetRequestID(src)
+	dst.Header.Set("Hermes-Request-ID", rid)
 }

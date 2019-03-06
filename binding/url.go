@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 type URLBinding struct {
@@ -20,22 +18,22 @@ const (
 
 var QueryFlags = 0 | IGNORE_MULTIPLE_QUERYVALS
 
-func (b *URLBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (b *URLBinding) Bind(req *http.Request, obj interface{}) error {
 	for _, param := range b.Params {
-		if err := BindPath(ctx, obj, param, param); err != nil {
+		if err := BindPath(req, obj, param, param); err != nil {
 			return err
 		}
 	}
 
 	for _, query := range b.Queries {
-		if err := BindQuery(ctx, obj, query, query); err != nil {
+		if err := BindQuery(req, obj, query, query); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (b *URLBinding) Apply(req *http.Request, input interface{}) error {
+func (b *URLBinding) Apply(input interface{}, req *http.Request) error {
 	if req == nil || input == nil {
 		return nil
 	}
@@ -53,7 +51,7 @@ func (b *URLBinding) Apply(req *http.Request, input interface{}) error {
 	for _, param := range b.Params {
 		if value, ok := fields[param]; ok {
 			ApplyPath(req, param, value)
-		} else if strings.Index(req.URL.Path, ":"+param) != -1 {
+		} else if strings.Index(req.URL.Path, "{"+param+"}") != -1 {
 			return fmt.Errorf("Failed to find path parameter :%s in input %v", param, input)
 		}
 	}

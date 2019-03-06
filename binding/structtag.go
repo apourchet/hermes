@@ -5,13 +5,11 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 type StructTagBinding struct{}
 
-type ValueBinder func(*gin.Context, interface{}, string, string) error
+type ValueBinder func(*http.Request, interface{}, string, string) error
 type ValueApplier func(req *http.Request, directivevalue string, fieldvalue string) error
 
 var StructTagBinds = map[string]ValueBinder{
@@ -38,7 +36,7 @@ var StructTagApps = map[string]ValueApplier{
 // request struct
 // The Limit field will come from the query string
 // The Resource field will come from the resource value of the path
-func (b StructTagBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (b StructTagBinding) Bind(req *http.Request, obj interface{}) error {
 	st, valid := DerefStruct(obj)
 	if !valid {
 		return nil
@@ -52,7 +50,7 @@ func (b StructTagBinding) Bind(ctx *gin.Context, obj interface{}) error {
 				if directive == "" {
 					continue
 				}
-				if err := b.BindDirective(ctx, obj, field.Name, directive); err != nil {
+				if err := b.BindDirective(req, obj, field.Name, directive); err != nil {
 					return err
 				}
 			}
@@ -61,7 +59,7 @@ func (b StructTagBinding) Bind(ctx *gin.Context, obj interface{}) error {
 	return nil
 }
 
-func (b StructTagBinding) Apply(req *http.Request, obj interface{}) error {
+func (b StructTagBinding) Apply(obj interface{}, req *http.Request) error {
 	if req == nil || obj == nil {
 		return nil
 	}
@@ -108,7 +106,7 @@ func (b StructTagBinding) Apply(req *http.Request, obj interface{}) error {
 	return nil
 }
 
-func (b StructTagBinding) BindDirective(ctx *gin.Context, obj interface{}, fieldname string, directive string) error {
+func (b StructTagBinding) BindDirective(req *http.Request, obj interface{}, fieldname string, directive string) error {
 	split := strings.Split(directive, "=")
 	if len(split) != 2 {
 		return fmt.Errorf("Malformed struct tag: %v", directive)
@@ -119,7 +117,7 @@ func (b StructTagBinding) BindDirective(ctx *gin.Context, obj interface{}, field
 		return fmt.Errorf("Failed to resolve struct tag operation: %v", tagkey)
 	}
 
-	err := operation(ctx, obj, tagval, fieldname)
+	err := operation(req, obj, tagval, fieldname)
 	return err
 }
 

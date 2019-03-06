@@ -10,13 +10,13 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
-	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
+	"github.com/gorilla/mux"
 )
 
 // Binds the header <headername> to the field <fieldname> of obj
-func BindHeader(ctx *gin.Context, obj interface{}, headername string, fieldname string) error {
-	headerval := ctx.Request.Header.Get(headername)
+func BindHeader(req *http.Request, obj interface{}, headername string, fieldname string) error {
+	headerval := req.Header.Get(headername)
 	if headerval == "" {
 		return nil
 	}
@@ -26,8 +26,8 @@ func BindHeader(ctx *gin.Context, obj interface{}, headername string, fieldname 
 	return nil
 }
 
-func BindQuery(ctx *gin.Context, obj interface{}, queryparam string, fieldname string) error {
-	vals, found := ctx.Request.URL.Query()[queryparam]
+func BindQuery(req *http.Request, obj interface{}, queryparam string, fieldname string) error {
+	vals, found := req.URL.Query()[queryparam]
 	if !found || len(vals) == 0 {
 		return nil
 	}
@@ -51,8 +51,8 @@ func BindQuery(ctx *gin.Context, obj interface{}, queryparam string, fieldname s
 	return nil
 }
 
-func BindPath(ctx *gin.Context, obj interface{}, pathparam string, fieldname string) error {
-	pathval := ctx.Param(pathparam)
+func BindPath(req *http.Request, obj interface{}, pathparam string, fieldname string) error {
+	pathval := mux.Vars(req)[pathparam]
 	if pathval == "" {
 		return nil
 	}
@@ -68,15 +68,16 @@ func BindPath(ctx *gin.Context, obj interface{}, pathparam string, fieldname str
 	return nil
 }
 
-func BindCookie(ctx *gin.Context, obj interface{}, cookiename string, fieldname string) error {
-	val, err := ctx.Cookie(cookiename)
+func BindCookie(req *http.Request, obj interface{}, cookiename string, fieldname string) error {
+	cookie, err := req.Cookie(cookiename)
 	if err == http.ErrNoCookie {
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("Failed to get cookie information from request: %v", err)
 	}
 
-	if unescaped, err := url.PathUnescape(val); err == nil {
+	val := cookie.Value
+	if unescaped, err := url.PathUnescape(cookie.Value); err == nil {
 		val = unescaped
 	}
 
@@ -100,7 +101,7 @@ func ApplyQuery(req *http.Request, queryname string, fieldvalue string) error {
 }
 
 func ApplyPath(req *http.Request, paramname string, fieldvalue string) error {
-	req.URL.Path = strings.Replace(req.URL.Path, ":"+paramname, url.QueryEscape(fieldvalue), -1)
+	req.URL.Path = strings.Replace(req.URL.Path, "{"+paramname+"}", url.QueryEscape(fieldvalue), -1)
 	return nil
 }
 

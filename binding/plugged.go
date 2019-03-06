@@ -2,12 +2,10 @@ package binding
 
 import (
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Bindable interface {
-	Bind(*gin.Context) error
+	Bind(*http.Request) error
 }
 
 type Applyable interface {
@@ -16,14 +14,14 @@ type Applyable interface {
 
 type PluginBinding struct{}
 
-func (_ PluginBinding) Bind(ctx *gin.Context, obj interface{}) error {
+func (_ PluginBinding) Bind(req *http.Request, obj interface{}) error {
 	if casted, ok := obj.(Bindable); ok {
-		return casted.Bind(ctx)
+		return casted.Bind(req)
 	}
 	return nil
 }
 
-func (_ PluginBinding) Apply(req *http.Request, obj interface{}) error {
+func (_ PluginBinding) Apply(obj interface{}, req *http.Request) error {
 	if casted, ok := obj.(Applyable); ok {
 		return casted.Apply(req)
 	}

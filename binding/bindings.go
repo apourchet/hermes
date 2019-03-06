@@ -2,11 +2,9 @@ package binding
 
 import (
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
 type Binding interface {
-	Bind(ctx *gin.Context, obj interface{}) error
-	Apply(req *http.Request, obj interface{}) error
+	Bind(req *http.Request, obj interface{}) error
+	Apply(obj interface{}, req *http.Request) error
 }

@@ -5,48 +5,59 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type Input struct {
+type testInput struct {
 	AuthHeader  string        `hermes:"header=Authorization"`
 	PathParam   int           `hermes:"path=someinteger"`
 	QueryParam  float64       `hermes:"query=somefloat"`
 	CookieParam []interface{} `hermes:"cookie=somecookie"`
 }
 
-var binding2 = &StructTagBinding{}
-
 func TestTagBinding(t *testing.T) {
-	input := &Input{"headerval", 12, 0.0, []interface{}{"a", "b"}}
-	inurl := "http://example.com/:someinteger"
-	req, _ := http.NewRequest("GET", inurl, nil)
+	binding2 := StructTagBinding{}
 
-	err := binding2.Apply(req, input)
-	assert.Nil(t, err)
+	t.Run("test bind", func(t *testing.T) {
+		inurl := "http://example.com/12?somefloat=1.1"
+		req, _ := http.NewRequest("GET", inurl, nil)
+		req.Header.Set("Authorization", "TOKEN")
+		req.AddCookie(&http.Cookie{Name: "somecookie", Value: url.PathEscape(`["a","b"]`)})
+		req = mux.SetURLVars(req, map[string]string{
+			"someinteger": "12",
+		})
 
-	// Check url was set properly
-	assert.Equal(t, "http://example.com/12?somefloat=0", req.URL.String())
+		// Check that binding will result in the same struct
+		newinput := &testInput{}
+		err := binding2.Bind(req, newinput)
+		require.NoError(t, err)
+		assert.Equal(t, "TOKEN", newinput.AuthHeader)
+		assert.Equal(t, 12, newinput.PathParam)
+		assert.Equal(t, 1.1, newinput.QueryParam)
+		assert.Len(t, newinput.CookieParam, 2)
+	})
 
-	// Check that cookie was set properly
-	cookieval, err := req.Cookie("somecookie")
-	assert.NoError(t, err)
-	assert.Equal(t, url.PathEscape(`["a","b"]`), cookieval.Value)
+	t.Run("test apply", func(t *testing.T) {
+		input := &testInput{"headerval", 12, 0.0, []interface{}{"a", "b"}}
+		inurl := "http://example.com/{someinteger}"
+		req, _ := http.NewRequest("GET", inurl, nil)
 
-	// Check that header was set properly
-	val := req.Header.Get("Authorization")
-	assert.Equal(t, "headerval", val)
+		err := binding2.Apply(input, req)
+		assert.Nil(t, err)
 
-	// Check that binding will result in the same struct
-	ctx := &gin.Context{
-		Request: req,
-		Params: []gin.Param{
-			{"someinteger", "12"},
-		},
-	}
-	newinput := &Input{}
-	err = binding2.Bind(ctx, newinput)
-	assert.NoError(t, err)
-	assert.Equal(t, *input, *newinput)
+		// Check url was set properly
+		assert.Equal(t, "http://example.com/12?somefloat=0", req.URL.String())
+
+		// Check that cookie was set properly
+		cookieval, err := req.Cookie("somecookie")
+		assert.NoError(t, err)
+		assert.Equal(t, url.PathEscape(`["a","b"]`), cookieval.Value)
+
+		// Check that header was set properly
+		val := req.Header.Get("Authorization")
+		assert.Equal(t, "headerval", val)
+	})
+
 }

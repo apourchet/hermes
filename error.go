@@ -1,7 +1,8 @@
 package hermes
 
 import (
-	"context"
+	"encoding/json"
+	"net/http"
 
 	"github.com/golang/glog"
 )
@@ -10,20 +11,25 @@ type Error struct {
 	Message string
 }
 
-func (e *Error) Error() string {
+func (e Error) Error() string {
 	return e.Message
 }
 
-type ErrorHandler func(ctx context.Context, path string, code int, err error)
+func (e Error) JSON() []byte {
+	content, _ := json.Marshal(e)
+	return content
+}
 
-type SuccessHandler func(ctx context.Context, path string, code int)
+type ErrorHandler func(req *http.Request, code int, err error)
+
+type SuccessHandler func(req *http.Request, code int)
 
 var DefaultErrorHandler ErrorHandler = LogError
 
-func LogError(ctx context.Context, path string, code int, err error) {
-	glog.Errorf("[%s] %s => %d | %v", GetRequestID(ctx), path, code, err)
+func LogError(req *http.Request, code int, err error) {
+	glog.Errorf("[%s] %s => %d | %v", GetRequestID(req), req.URL.Path, code, err)
 }
 
-var DefaultSuccessHandler SuccessHandler = func(ctx context.Context, path string, code int) {
-	glog.Infof("[%s] %s => %d", GetRequestID(ctx), path, code)
+var DefaultSuccessHandler SuccessHandler = func(req *http.Request, code int) {
+	glog.Infof("[%s] %s => %d", GetRequestID(req), req.URL.Path, code)
 }

@@ -6,20 +6,19 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 )
 
 type JSONBinding struct{}
 
-func (_ *JSONBinding) Bind(ctx *gin.Context, obj interface{}) error {
-	if ctx.Request != nil && ctx.Request.ContentLength > 0 {
-		return binding.JSON.Bind(ctx.Request, obj)
+func (_ *JSONBinding) Bind(req *http.Request, obj interface{}) error {
+	if req != nil && req.ContentLength > 0 {
+		return binding.JSON.Bind(req, obj)
 	}
 	return nil
 }
 
-func (_ *JSONBinding) Apply(req *http.Request, obj interface{}) error {
+func (_ *JSONBinding) Apply(obj interface{}, req *http.Request) error {
 	content, err := json.Marshal(obj)
 	if err != nil {
 		return err

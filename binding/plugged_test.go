@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,8 +11,8 @@ type PluggableInput struct {
 	req *http.Request
 }
 
-func (in *PluggableInput) Bind(ctx *gin.Context) error {
-	in.req = ctx.Request
+func (in *PluggableInput) Bind(req *http.Request) error {
+	in.req = req
 	return nil
 }
 
@@ -21,12 +20,10 @@ var pluginBinding = PluginBinding{}
 
 func TestPluginBinding(t *testing.T) {
 	in := &PluggableInput{}
-	ctx := &gin.Context{
-		Request: &http.Request{
-			Method: "TESTMETHOD",
-		},
+	req := &http.Request{
+		Method: "TESTMETHOD",
 	}
-	err := pluginBinding.Bind(ctx, in)
+	err := pluginBinding.Bind(req, in)
 	require.NoError(t, err)
 	require.Equal(t, "TESTMETHOD", in.req.Method)
 }
