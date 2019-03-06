@@ -28,7 +28,7 @@ func TestHealthzSuccess(t *testing.T) {
 	caller := hermes.NewCaller(Service{})
 	caller.Client = &hermes.MockClient{engine}
 
-	code, err := caller.Call(nil, "Healthz", nil, nil)
+	code, err := caller.Call("Healthz", nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, http.StatusOK, code)
 }

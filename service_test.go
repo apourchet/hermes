@@ -192,53 +192,53 @@ func TestMain(m *testing.M) {
 
 func TestCallSuccess(t *testing.T) {
 	out := &Outbound{false}
-	_, err := si.Call(nil, "RpcCall", &Inbound{"secret"}, out)
+	_, err := si.Call("RpcCall", &Inbound{"secret"}, out)
 	require.NoError(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestCallWrongSecret(t *testing.T) {
 	out := &Outbound{true}
-	_, err := si.Call(nil, "RpcCall", &Inbound{"wrong secret"}, out)
+	_, err := si.Call("RpcCall", &Inbound{"wrong secret"}, out)
 	assert.NotNil(t, err)
 	assert.True(t, out.Ok) // Error in the request, out was not filled in
 }
 
 func TestCallNotFound(t *testing.T) {
-	_, err := si.Call(nil, "NotAnEndpoint", &Inbound{}, &Outbound{})
+	_, err := si.Call("NotAnEndpoint", &Inbound{}, &Outbound{})
 	assert.NotNil(t, err)
 }
 
 func TestNoInput(t *testing.T) {
 	out := &Outbound{false}
-	_, err := si.Call(nil, "NoInput", nil, out)
+	_, err := si.Call("NoInput", nil, out)
 	require.NoError(t, err)
 	assert.True(t, out.Ok)
 }
 
 func TestNoOutput(t *testing.T) {
-	_, err := si.Call(nil, "NoOutput", &Inbound{"secret"}, nil)
+	_, err := si.Call("NoOutput", &Inbound{"secret"}, nil)
 	require.NoError(t, err)
 
-	_, err = si.Call(nil, "NoOutput", &Inbound{"wrong secret"}, nil)
+	_, err = si.Call("NoOutput", &Inbound{"wrong secret"}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestSliced(t *testing.T) {
-	_, err := si.Call(nil, "Sliced", &Slice{"a", "b"}, nil)
+	_, err := si.Call("Sliced", &Slice{"a", "b"}, nil)
 	require.NoError(t, err)
 
-	_, err = si.Call(nil, "Sliced", nil, nil)
+	_, err = si.Call("Sliced", nil, nil)
 	assert.NotNil(t, err)
 }
 
 func TestPointers(t *testing.T) {
 	s := ""
 	i := 69
-	_, err := si.Call(nil, "Pointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call("Pointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	_, err = si.Call(nil, "Pointers", &Pointers{&i, nil}, nil)
+	_, err = si.Call("Pointers", &Pointers{&i, nil}, nil)
 	require.NoError(t, err)
 }
 
@@ -261,14 +261,14 @@ func TestAllTypes(t *testing.T) {
 		}{{"slice", &f}},
 	}
 
-	_, err := si.Call(nil, "AllTypes", input, nil)
+	_, err := si.Call("AllTypes", input, nil)
 	require.NoError(t, err)
 }
 
 func TestRawType(t *testing.T) {
 	in := 13
 	out := ""
-	_, err := si.Call(nil, "RawType", &in, &out)
+	_, err := si.Call("RawType", &in, &out)
 	require.NoError(t, err)
 	assert.Equal(t, "13", out)
 }
@@ -276,7 +276,7 @@ func TestRawType(t *testing.T) {
 func TestRawMap(t *testing.T) {
 	in := map[string]string{"a": "b"}
 	out := map[string]int{}
-	_, err := si.Call(nil, "RawMap", &in, &out)
+	_, err := si.Call("RawMap", &in, &out)
 	require.NoError(t, err)
 	assert.Equal(t, 1, len(out))
 	assert.Equal(t, 13, out["ab"])
@@ -285,26 +285,26 @@ func TestRawMap(t *testing.T) {
 func TestQueryPointers(t *testing.T) {
 	s := ""
 	i := 69
-	_, err := si.Call(nil, "QueryPointers", &Pointers{&i, &s}, nil)
+	_, err := si.Call("QueryPointers", &Pointers{&i, &s}, nil)
 	assert.NotNil(t, err)
 
-	_, err = si.Call(nil, "QueryPointers", &Pointers{&i, nil}, nil)
+	_, err = si.Call("QueryPointers", &Pointers{&i, nil}, nil)
 	require.NoError(t, err)
 }
 
 func TestParamed(t *testing.T) {
-	_, err := si.Call(nil, "Paramed", &Action{69}, nil)
+	_, err := si.Call("Paramed", &Action{69}, nil)
 	require.NoError(t, err)
 
-	_, err = si.Call(nil, "Paramed", &Action{13}, nil)
+	_, err = si.Call("Paramed", &Action{13}, nil)
 	assert.NotNil(t, err)
 }
 
 func TestQueried(t *testing.T) {
-	_, err := si.Call(nil, "Queried", &Action{69}, nil)
+	_, err := si.Call("Queried", &Action{69}, nil)
 	require.NoError(t, err)
 
-	_, err = si.Call(nil, "Queried", &Action{13}, nil)
+	_, err = si.Call("Queried", &Action{13}, nil)
 	assert.NotNil(t, err)
 }
 

@@ -15,22 +15,37 @@ type Caller struct {
 	Scheme string
 
 	callable ICallable
+	source   *http.Request
 }
 
 func NewCaller(callable ICallable) *Caller {
-	out := &Caller{}
-	out.Client = DefaultClient
-	out.Resolve = DefaultResolver
-	out.Bindings = DefaultBindingFactory
-	out.Scheme = "http"
-	out.callable = callable
+	out := &Caller{
+		Client:   DefaultClient,
+		Resolve:  DefaultResolver,
+		Bindings: DefaultBindingFactory,
+		Scheme:   "http",
+		callable: callable,
+	}
 	return out
 }
 
-func (caller *Caller) Call(ctx *http.Request, methodname string, in, out interface{}) (int, error) {
+func (caller *Caller) WithSource(req *http.Request) *Caller {
+	return &Caller{
+		Client:   caller.Client,
+		Resolve:  caller.Resolve,
+		Bindings: caller.Bindings,
+		Scheme:   caller.Scheme,
+
+		callable: caller.callable,
+		source:   req,
+	}
+}
+
+func (caller *Caller) Call(methodname string, in, out interface{}) (int, error) {
 	callable := caller.callable
-	if ctx == nil {
-		ctx = &http.Request{}
+	source := caller.source
+	if source == nil {
+		source = &http.Request{}
 	}
 
 	// Get endpoint
@@ -58,10 +73,10 @@ func (caller *Caller) Call(ctx *http.Request, methodname string, in, out interfa
 	}
 
 	// Transfer request ID to call
-	TransferRequestID(ctx, req)
+	TransferRequestID(source, req)
 
 	// Execute request
-	resp, err := caller.Client.Exec(ctx.Context(), req)
+	resp, err := caller.Client.Exec(source.Context(), req)
 	if err != nil {
 		return http.StatusInternalServerError, fmt.Errorf("Client failed execute request: %v", err)
 	}

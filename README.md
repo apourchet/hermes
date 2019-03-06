@@ -13,7 +13,7 @@ func (s *MyService) SNI() string {
 
 func (s *MyService) Endpoints() hermes.EndpointMap {
 	return hermes.EndpointMap{
-		hermes.EP("RpcCall", "GET", "/test", Inbount{}, Outbound{}), 
+		hermes.EP("RpcCall", "GET", "/test", Inbount{}, Outbound{}),
 		hermes.EP("OtherRpcCall", "POST", "/test", OtherInbound{}, OtherOutbound{}),
 	}
 }
@@ -23,7 +23,7 @@ func (s *MyService) Endpoints() hermes.EndpointMap {
 type Inbound struct { Message string }
 type Outbound struct { Ok bool }
 
-func (s *MyService) RpcCall(c *gin.Context, in *Inbound, out *Outbound) (int, error) {
+func (s *MyService) RpcCall(req *http.Request, in *Inbound, out *Outbound) (int, error) {
 	if in.Message == "secret" {
 		out.Ok = true
 		return http.StatusOK, nil
@@ -36,7 +36,7 @@ func (s *MyService) RpcCall(c *gin.Context, in *Inbound, out *Outbound) (int, er
 type OtherInbound struct { MyField int }
 type OtherOutbound struct { SomeFloat float64 }
 
-func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOutbound) (int, error) {
+func (s *MyService) OtherRpcCall(req *http.Request, in *OtherInbound, out *OtherOutbound) (int, error) {
 	out.SomeFloat = 3.14 * in.MyField
   	return http.StatusOK, nil
 }
@@ -44,10 +44,10 @@ func (s *MyService) OtherRpcCall(c *gin.Context, in *OtherInbound, out *OtherOut
 
 ### Server Creation
 ```go
-engine := gin.New()
+engine := http.NewServeMux()
 server := hermes.NewServer(&MyService{})
 server.Serve(engine)
-engine.Run(":9000")
+http.ListenAndServe(":9000", mux)
 ```
 
 ### Client RPC Call
